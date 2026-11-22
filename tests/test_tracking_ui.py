@@ -117,6 +117,16 @@ class PanelBehaviour(unittest.TestCase):
             p.source.setText(text)
             self.assertEqual(p.transport.isEnabled(), enabled, text)
 
+    def test_panel_style_tracks_main_theme(self):
+        from gui_theme import THEMES
+        theme = THEMES['light']
+        self.panel.apply_theme(theme)
+        style = self.panel.styleSheet()
+        self.assertIn(f'background:{theme.background}', style)
+        self.assertIn(f'background:{theme.panel}', style)
+        self.assertIn(f'background:{theme.accent}', style)
+        self.assertEqual(self.panel.canvas.theme, theme)
+
     def test_reason_text_and_tooltip(self):
         p = self.panel
         p.start_demo(); p.service.disconnect_source('source_changed'); p.refresh()

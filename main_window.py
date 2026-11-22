@@ -859,6 +859,7 @@ class MainWindow(QMainWindow):
         self.page_support.apply_theme(theme)
         self.page_fleet.apply_theme(theme)
         self.page_ai_tuner.apply_theme(theme)
+        self.tracking_panel.apply_theme(theme)
         self.theme = theme
         for index in range(self.cmb_active_vehicle.count()):
             vehicle = self.fleet.vehicle_by_str(self.cmb_active_vehicle.itemData(index))

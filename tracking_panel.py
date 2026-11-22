@@ -20,11 +20,8 @@ from tracking_service import TrackingService, reason_text
 from tracking_session import SELECTION_WINDOW_RANGE
 from flight_mode_controller import ModeRequestError
 from gui_help import help_button, set_guide
+from gui_theme import DEFAULT_THEME, THEMES
 
-GREEN, YELLOW, RED, PURPLE, BLUE, ORANGE, MUTED = ('#3ee59a', '#ffd23f', '#ff5c7a', '#c9a2ff', '#8fd0ff',
-                                                  '#ffae4d', '#c9d1de')
-STATE_COLOR = {'TRACKING': GREEN, 'SELECTING': YELLOW, 'LOST': RED, 'ERROR': RED, 'STOPPED': BLUE, 'IDLE': BLUE}
-LEVEL_COLOR = {'ok': GREEN, 'info': BLUE, 'warn': YELLOW, 'danger': RED}
 DASH = '—'
 
 # On-demand guides (UI guide principle 2026-11-22): usage text lives here, not on screen.
@@ -79,30 +76,40 @@ GUIDES = {
 ALL_GUIDES = [f'<b style="color:#ffd23f">{title}</b><br>' + '<br>'.join(f'• {line}' for line in lines)
               for title, lines in GUIDES.items()]
 
-STYLE = """
-QDialog#trackingWindow { background:#0e1118; }
-QDialog#trackingWindow QLabel { color:#f5f7fb; font-size:16px; }
-QDialog#trackingWindow QLabel[role="key"] { color:#c9d1de; font-weight:600; }
-QDialog#trackingWindow QLabel[role="value"] { font-weight:800; font-family:Menlo; font-size:16px; }
-QDialog#trackingWindow QGroupBox { border:2px solid #3a4352; border-radius:10px; margin-top:6px;
-    padding:8px 10px 10px 10px; background:#171b24; }
-QDialog#trackingWindow QLabel[role="groupTitle"] { color:#ffd23f; font-size:19px; font-weight:900; }
-QDialog#trackingWindow QGroupBox::title { subcontrol-origin:margin; subcontrol-position:top left; left:10px;
-    top:2px; padding:0 4px; color:#ffd23f; background:transparent; }
-QDialog#trackingWindow QPushButton { font-size:16px; font-weight:800; min-height:38px; padding:4px 12px;
-    color:#f5f7fb; background:#232a36; border:2px solid #4a5568; border-radius:8px; }
-QDialog#trackingWindow QPushButton:hover { border-color:#ffd23f; }
-QDialog#trackingWindow QPushButton:disabled { color:#6b7484; border-color:#2c3340; }
-QDialog#trackingWindow QPushButton[kind="primary"] { background:#ffd23f; color:#17140a; border-color:#ffd23f; }
-QDialog#trackingWindow QPushButton[kind="danger"] { background:#5a1424; border-color:#ff5c7a; }
-QDialog#trackingWindow QPushButton[kind="sim"] { border-color:#c9a2ff; color:#c9a2ff; }
-QDialog#trackingWindow QLineEdit, QDialog#trackingWindow QComboBox, QDialog#trackingWindow QDoubleSpinBox {
-    font-size:16px; font-weight:700; min-height:34px; color:#f5f7fb; background:#131821;
-    border:2px solid #4a5568; border-radius:7px; padding:2px 8px; }
-QDialog#trackingWindow QComboBox:disabled { color:#6b7484; }
-QDialog#trackingWindow QListWidget { font-size:15px; background:#131821; color:#f5f7fb; border:1px solid #3a4352; }
-QDialog#trackingWindow QTabBar::tab { font-size:15px; font-weight:800; padding:7px 16px; color:#c9d1de; }
-QDialog#trackingWindow QTabBar::tab:selected { color:#ffd23f; }
+def _panel_stylesheet(theme):
+    return f"""
+QDialog#trackingWindow {{ background:{theme.background}; }}
+QDialog#trackingWindow QLabel {{ color:{theme.text}; font-size:16px; }}
+QDialog#trackingWindow QLabel[role="key"] {{ color:{theme.muted}; font-weight:600; }}
+QDialog#trackingWindow QLabel[role="value"] {{ font-weight:800; font-family:Menlo; font-size:16px; }}
+QDialog#trackingWindow QGroupBox {{ border:2px solid {theme.border}; border-radius:{theme.radius}px;
+    margin-top:6px; padding:8px 10px 10px 10px; background:{theme.panel}; }}
+QDialog#trackingWindow QLabel[role="groupTitle"] {{ color:{theme.accent}; font-size:19px; font-weight:900; }}
+QDialog#trackingWindow QGroupBox::title {{ subcontrol-origin:margin; subcontrol-position:top left; left:10px;
+    top:2px; padding:0 4px; color:{theme.accent}; background:transparent; }}
+QDialog#trackingWindow QPushButton {{ font-size:16px; font-weight:800; min-height:38px; padding:4px 12px;
+    color:{theme.text}; background:{theme.panel}; border:2px solid {theme.border};
+    border-radius:{theme.button_radius}px; }}
+QDialog#trackingWindow QPushButton:hover {{ border-color:{theme.accent}; background:{theme.hover}; }}
+QDialog#trackingWindow QPushButton:disabled {{ color:{theme.muted}; border-color:{theme.border}; }}
+QDialog#trackingWindow QPushButton[kind="primary"] {{ background:{theme.accent}; color:{theme.accent_text};
+    border-color:{theme.accent}; }}
+QDialog#trackingWindow QPushButton[kind="danger"] {{ background:{theme.panel}; border-color:{theme.danger};
+    color:{theme.danger}; }}
+QDialog#trackingWindow QPushButton[kind="sim"] {{ border-color:{theme.secondary}; color:{theme.secondary}; }}
+QDialog#trackingWindow QLineEdit, QDialog#trackingWindow QComboBox, QDialog#trackingWindow QDoubleSpinBox {{
+    font-size:16px; font-weight:700; min-height:34px; color:{theme.text}; background:{theme.field};
+    border:2px solid {theme.border}; border-radius:{theme.button_radius}px; padding:2px 8px; }}
+QDialog#trackingWindow QLineEdit:focus, QDialog#trackingWindow QComboBox:focus,
+QDialog#trackingWindow QDoubleSpinBox:focus {{ border-color:{theme.accent}; }}
+QDialog#trackingWindow QComboBox:disabled {{ color:{theme.muted}; }}
+QDialog#trackingWindow QListWidget {{ font-size:15px; background:{theme.field}; color:{theme.text};
+    border:1px solid {theme.border}; }}
+QDialog#trackingWindow QTabBar::tab {{ font-size:15px; font-weight:800; padding:7px 16px;
+    color:{theme.muted}; background:{theme.panel}; border-bottom:2px solid {theme.border}; }}
+QDialog#trackingWindow QTabBar::tab:selected {{ color:{theme.accent}; background:{theme.selected};
+    border-color:{theme.accent}; }}
+QDialog#trackingWindow QScrollArea {{ background:{theme.background}; border:0; }}
 """
 
 
@@ -122,12 +129,13 @@ def image_point(point, geometry):
     return sx+(px-x)*sw/w, sy+(py-y)*sh/h
 
 
-def chip_style(color, filled=False):
+def chip_style(color, filled=False, theme=None):
+    theme = theme or THEMES[DEFAULT_THEME]
     if filled:
-        return (f'QLabel{{background:{color};color:#111;font-size:15px;font-weight:900;'
-                f'border:2px solid {color};border-radius:13px;padding:3px 10px;}}')
-    return (f'QLabel{{background:#131821;color:{color};font-size:15px;font-weight:800;'
-            f'border:2px solid {color};border-radius:13px;padding:3px 10px;}}')
+        return (f'QLabel{{background:{color};color:{theme.accent_text};font-size:15px;font-weight:900;'
+                f'border:2px solid {color};border-radius:{theme.button_radius + 6}px;padding:3px 10px;}}')
+    return (f'QLabel{{background:{theme.field};color:{color};font-size:15px;font-weight:800;'
+            f'border:2px solid {color};border-radius:{theme.button_radius + 6}px;padding:3px 10px;}}')
 
 
 class TrackingCanvas(VideoCanvas):
@@ -140,9 +148,17 @@ class TrackingCanvas(VideoCanvas):
         self.result = None
         self.countdown = None
         self.monitor = 'MONITOR ONLY'
-        # Keep the inherited zoom buttons compact even under the large-button window style.
-        self.zoom_controls.setStyleSheet('QPushButton{min-height:26px;padding:0;font-size:15px;font-weight:900;'
-                                         'color:#fff;background:#232a36;border:1px solid #6b7484;border-radius:6px;}')
+        self.theme = THEMES[DEFAULT_THEME]
+        self.apply_theme(THEMES[DEFAULT_THEME])
+
+    def apply_theme(self, theme):
+        self.theme = theme
+        self.zoom_controls.setStyleSheet(
+            f'QPushButton{{min-height:26px;padding:0;font-size:15px;font-weight:900;'
+            f'color:{theme.text};background:{theme.panel};border:1px solid {theme.border};'
+            f'border-radius:{theme.button_radius}px;}}'
+            f'QPushButton:hover{{border-color:{theme.accent};background:{theme.hover};}}'
+        )
 
     def geometry_map(self):
         if self.image is None:
@@ -198,20 +214,21 @@ class TrackingCanvas(VideoCanvas):
             bx, by, bw, bh = r.bbox
             rect = QRectF(point(bx, by), point(bx+bw, by+bh))
             p.setPen(QPen(QColor('#000'), 6)); p.drawRect(rect)
-            p.setPen(QPen(QColor(GREEN), 3.5)); p.drawRect(rect)
+            p.setPen(QPen(QColor(self.theme.success), 3.5)); p.drawRect(rect)
             p.setPen(QPen(QColor(255, 210, 63, 200), 2.5))
             for a, b in zip(r.trail, r.trail[1:]):
                 p.drawLine(point(*a), point(*b))
             cx, cy = r.center
-            p.setPen(QPen(QColor(YELLOW), 2.5))
+            p.setPen(QPen(QColor(self.theme.warning), 2.5))
             p.drawLine(point(sx + sw/2, sy + sh/2), point(cx, cy))
-            self._label(p, rect.left(), max(y + 2, rect.top() - 32), f'TRACKING · 품질 {r.quality:.2f}', GREEN)
+            self._label(p, rect.left(), max(y + 2, rect.top() - 32),
+                        f'TRACKING · 품질 {r.quality:.2f}', self.theme.success)
         if self.anchor and self.drag:
-            p.setPen(QPen(QColor(YELLOW), 3, Qt.DashLine))
+            p.setPen(QPen(QColor(self.theme.warning), 3, Qt.DashLine))
             p.drawRect(QRectF(point(*self.anchor), point(*self.drag)).normalized())
         if self.countdown:
-            self._label(p, x + 12, y + 12, self.countdown, YELLOW, 22)
-        color = PURPLE if self.monitor == 'SIMULATION' else YELLOW
+            self._label(p, x + 12, y + 12, self.countdown, self.theme.warning, 22)
+        color = self.theme.secondary if self.monitor == 'SIMULATION' else self.theme.accent
         self._label(p, x + 12, y + h - 44, self.monitor, color)   # bottom-left: zoom buttons sit bottom-right
         p.end()
 
@@ -222,7 +239,8 @@ class TrackingPanel(QDialog):
     def __init__(self, parent=None, service=None):
         super().__init__(parent)
         self.setObjectName('trackingWindow')
-        self.setStyleSheet(STYLE)
+        self.theme = THEMES[DEFAULT_THEME]
+        self.setStyleSheet(_panel_stylesheet(self.theme))
         self.setWindowTitle('Linker Tracking')
         self.resize(1440, 900)
         self.owns_service = service is None
@@ -253,8 +271,6 @@ class TrackingPanel(QDialog):
         root.addWidget(self.banner)
         self.video_warn = QLabel('')
         self.video_warn.setWordWrap(True)
-        self.video_warn.setStyleSheet(f'QLabel{{color:{ORANGE};font-size:18px;font-weight:900;border:2px solid {ORANGE};'
-                                      f'border-radius:8px;padding:6px 10px;}}')
         self.video_warn.hide()
         root.addWidget(self.video_warn)
         # ---- browser dashboard bar (placed at the bottom of the window) ----
@@ -386,7 +402,7 @@ class TrackingPanel(QDialog):
         head.addWidget(self.state_badge); head.addWidget(self.reason, 1)
         layout.addLayout(head)
         self.countdown = QLabel('')
-        self.countdown.setStyleSheet(f'QLabel{{color:{YELLOW};font-size:26px;font-weight:900;}}')
+        self.countdown.setStyleSheet(f'QLabel{{color:{self.theme.warning};font-size:26px;font-weight:900;}}')
         self.countdown.setWordWrap(True)
         layout.addWidget(self.countdown)
         grid, self.track = self._grid([('quality', '품질(잔존 특징점)'), ('hold', '유지 시간'),
@@ -444,7 +460,7 @@ class TrackingPanel(QDialog):
                                      ('bat', '배터리'), ('pos', '위치')])
         layout.addLayout(grid)
         self.alt_note = QLabel(DASH); self.alt_note.setWordWrap(True)
-        self.alt_note.setStyleSheet(f'QLabel{{color:{MUTED};font-size:14px;}}')
+        self.alt_note.setStyleSheet(f'QLabel{{color:{self.theme.muted};font-size:14px;}}')
         layout.addWidget(self.alt_note)
         return box
 
@@ -452,6 +468,28 @@ class TrackingPanel(QDialog):
     @property
     def session(self):
         return self.service.session
+
+    def apply_theme(self, theme):
+        self.theme = theme
+        self.setStyleSheet(_panel_stylesheet(theme))
+        self.canvas.apply_theme(theme)
+        self.video_warn.setStyleSheet(
+            f'QLabel{{color:{theme.warning};font-size:18px;font-weight:900;border:2px solid {theme.warning};'
+            f'border-radius:{theme.button_radius}px;padding:6px 10px;}}'
+        )
+        self.countdown.setStyleSheet(f'QLabel{{color:{theme.warning};font-size:26px;font-weight:900;}}')
+        self.alt_note.setStyleSheet(f'QLabel{{color:{theme.muted};font-size:14px;}}')
+        self.refresh()
+
+    def _state_color(self, state):
+        return {
+            'TRACKING': self.theme.success,
+            'SELECTING': self.theme.warning,
+            'LOST': self.theme.danger,
+            'ERROR': self.theme.danger,
+            'STOPPED': self.theme.accent,
+            'IDLE': self.theme.accent,
+        }.get(state, self.theme.muted)
 
     @property
     def capture(self):
@@ -582,7 +620,7 @@ class TrackingPanel(QDialog):
     # ---- view ----
     def _chip(self, name, text, color, filled=False, tip=''):
         label = self.chips[name]
-        style = chip_style(color, filled)
+        style = chip_style(color, filled, self.theme)
         if label.styleSheet() != style:
             label.setStyleSheet(style)
         if label.text() != text:
@@ -622,39 +660,43 @@ class TrackingPanel(QDialog):
 
     def _render_header(self, snap, t, v, veh):
         sim = snap['app']['monitor'] == 'SIMULATION'
-        self._chip('monitor', snap['app']['monitor'], PURPLE if sim else YELLOW, True)
-        self._chip('app', '앱 연결됨', GREEN)
-        vcolor = {'LIVE': GREEN, 'SIMULATION': PURPLE, 'CONNECTING': YELLOW, 'STALE': RED}.get(v['state'], MUTED)
+        self._chip('monitor', snap['app']['monitor'], self.theme.secondary if sim else self.theme.accent, True)
+        self._chip('app', '앱 연결됨', self.theme.success)
+        vcolor = {'LIVE': self.theme.success, 'SIMULATION': self.theme.secondary,
+                  'CONNECTING': self.theme.warning, 'STALE': self.theme.danger}.get(v['state'], self.theme.muted)
         self._chip('video', f'영상 {v["state"]}', vcolor, tip=v['source'])
         if veh is None:
             for name, text in (('vehicle', '기체 미선택'), ('heartbeat', 'HB —'), ('mode', '모드 —'), ('armed', '시동 —')):
-                self._chip(name, text, MUTED)
+                self._chip(name, text, self.theme.muted)
         else:
             self._chip('vehicle', f'{veh["name"]} · SYS {veh["sysid"]} / COMP {veh["compid"]}'
                        if not str(veh['name']).startswith('SYS') else f'{veh["name"]} · COMP {veh["compid"]}',
-                       GREEN if veh['connected'] else RED)
+                       self.theme.success if veh['connected'] else self.theme.danger)
             stale = veh['heartbeat_stale']
             self._chip('heartbeat', f'HB {"STALE" if stale else "OK"} {veh["heartbeat_age_s"] if veh["heartbeat_age_s"] is not None else DASH}s',
-                       RED if stale else GREEN)
-            self._chip('mode', f'모드 {veh["mode"] or DASH}', BLUE)
+                       self.theme.danger if stale else self.theme.success)
+            self._chip('mode', f'모드 {veh["mode"] or DASH}', self.theme.accent)
             armed = veh['armed']
             self._chip('armed', DASH if armed is None else ('ARMED' if armed else 'DISARMED'),
-                       RED if armed else (GREEN if armed is False else MUTED), bool(armed))
-        self._chip('tracking', f'Tracking {t["state"]}', STATE_COLOR.get(t['state'], MUTED), True, t['reason'])
+                       self.theme.danger if armed else (
+                           self.theme.success if armed is False else self.theme.muted), bool(armed))
+        self._chip('tracking', f'Tracking {t["state"]}', self._state_color(t['state']), True, t['reason'])
         sentinel = snap['sentinel']['state']
-        self._chip('sentinel', f'Sentinel Legacy {sentinel}', GREEN if sentinel not in ('미사용', None) else MUTED)
+        self._chip('sentinel', f'Sentinel Legacy {sentinel}',
+                   self.theme.success if sentinel not in ('미사용', None) else self.theme.muted)
         level, text = snap['banner']['level'], snap['banner']['text']
-        color = LEVEL_COLOR.get(level, BLUE)
+        color = {'ok': self.theme.success, 'info': self.theme.accent, 'warn': self.theme.warning,
+                 'danger': self.theme.danger}.get(level, self.theme.accent)
         style = (f'QLabel{{font-size:20px;font-weight:900;padding:10px 14px;border-radius:10px;'
-                 f'border:3px solid {color};color:{"#fff" if level == "danger" else color};'
-                 f'background:{"#5a1424" if level == "danger" else "#171b24"};}}')
+                 f'border:3px solid {color};color:{self.theme.text};'
+                 f'background:{self.theme.panel};}}')
         if self.banner.styleSheet() != style:
             self.banner.setStyleSheet(style)
         self.banner.setText(text)
 
     def _render_tracking(self, snap, t, v, sel):
-        color = STATE_COLOR.get(t['state'], MUTED)
-        style = (f'QLabel{{background:{color};color:#111;font-size:30px;font-weight:900;'
+        color = self._state_color(t['state'])
+        style = (f'QLabel{{background:{color};color:{self.theme.accent_text};font-size:30px;font-weight:900;'
                  f'border-radius:10px;padding:6px 12px;}}')
         if self.state_badge.styleSheet() != style:
             self.state_badge.setStyleSheet(style)
@@ -678,7 +720,7 @@ class TrackingPanel(QDialog):
         self.track['error'].setText(DASH if not err else f'{err[0]:+.3f}, {err[1]:+.3f}')
         stale = v['state'] == 'STALE'
         self.track['age'].setText(val(v['frame_age_ms'], '{}', ' ms') + ('  STALE' if stale else ''))
-        self.track['age'].setStyleSheet(f'QLabel{{color:{ORANGE if stale else "#f5f7fb"};}}')
+        self.track['age'].setStyleSheet(f'QLabel{{color:{self.theme.warning if stale else self.theme.text};}}')
         self.track['dfps'].setText(val(v['decode_fps'], '{:.1f}'))
         self.track['cls'].setText(t['object_class'])
         out = snap['simulation']
@@ -732,7 +774,7 @@ class TrackingPanel(QDialog):
         for key, text, stale in rows:
             label = self.veh[key]
             label.setText(text + ('  STALE' if stale else ''))
-            label.setStyleSheet(f'QLabel{{color:{ORANGE if stale else "#f5f7fb"};}}')
+            label.setStyleSheet(f'QLabel{{color:{self.theme.warning if stale else self.theme.text};}}')
         for key, label in self.veh.items():
             if key not in shown:
                 label.setText(DASH)
@@ -767,8 +809,10 @@ class TrackingPanel(QDialog):
                 self.mode_combo.setCurrentIndex(index)
         stale = veh is None or veh['heartbeat_stale']
         self.mode_button.setEnabled(not busy and not stale and bool(modes['options']))
-        color = {'CONFIRMED': GREEN, 'REJECTED': RED, 'TIMEOUT': RED, 'FAILED': RED, 'CANCELLED': ORANGE,
-                 'REQUESTING': YELLOW, 'CONFIRMING': YELLOW}.get(ctl['state'], MUTED)
+        color = {'CONFIRMED': self.theme.success, 'REJECTED': self.theme.danger,
+                 'TIMEOUT': self.theme.danger, 'FAILED': self.theme.danger,
+                 'CANCELLED': self.theme.warning, 'REQUESTING': self.theme.accent,
+                 'CONFIRMING': self.theme.accent}.get(ctl['state'], self.theme.muted)
         src = f' · 출처 {ctl["source"]}' if ctl.get('source') else ''
         extra = ' · HEARTBEAT stale: 요청 불가' if veh is not None and stale else ''
         self.mode_state.setText(f'{ctl["state"]} · {ctl["detail"]}{src}{extra}')
@@ -782,20 +826,23 @@ class TrackingPanel(QDialog):
         self.events.clear()
         for e in events:
             item = QListWidgetItem(f'{e["t"]}  [{e["kind"]}]  {e["text"]}')
-            item.setForeground(QColor({'warn': YELLOW, 'danger': RED}.get(e['level'], '#f5f7fb')))
+            item.setForeground(QColor({'warn': self.theme.warning, 'danger': self.theme.danger}.get(
+                e['level'], self.theme.text)))
             self.events.addItem(item)
 
     def _render_web(self, snap):
         open_ = self.service.dashboard is not None
-        self._chip('webmode', '웹 모드변경 ON', ORANGE, True, '브라우저 대시보드에서 비행 모드 변경 요청 가능')
+        self._chip('webmode', '웹 모드변경 ON', self.theme.warning, True,
+                   '브라우저 대시보드에서 비행 모드 변경 요청 가능')
         self.chips['webmode'].setVisible(open_)
         if open_:
             self.web.setText(f'브라우저 대시보드 {self.service.dashboard.url} · 같은 추적 세션 공유 중')
-            self.web.setStyleSheet(f'QLabel{{color:{ORANGE};font-size:17px;font-weight:900;'
-                                   f'border:2px solid {ORANGE};border-radius:8px;padding:6px 10px;}}')
+            self.web.setStyleSheet(f'QLabel{{color:{self.theme.warning};font-size:17px;font-weight:900;'
+                                   f'border:2px solid {self.theme.warning};'
+                                   f'border-radius:{self.theme.button_radius}px;padding:6px 10px;}}')
         else:
             self.web.setText('브라우저 대시보드 꺼짐')
-            self.web.setStyleSheet(f'QLabel{{color:{MUTED};font-size:15px;}}')
+            self.web.setStyleSheet(f'QLabel{{color:{self.theme.muted};font-size:15px;}}')
         self.web_open.setText('브라우저에서 열기' if open_ else '브라우저 대시보드 열기')
         self.web_close.setEnabled(open_)
 
