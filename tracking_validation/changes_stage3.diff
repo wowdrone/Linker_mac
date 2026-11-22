@@ -1,0 +1,1788 @@
+--- stage3/Codex_CLI_Tracking_보완프롬프트.txt
++++ Codex_CLI_Tracking_보완프롬프트.txt
+@@ -12,17 +12,19 @@
+ 2) xcode-select가 Command Line Tools로 바뀌었으므로 git이 동작하는지 확인하라. git init·커밋은 하지 말고, 보고서에 "git 저장소 도입 권장"과 .gitignore 초안(아래 5단계)만 제시하라.
+ 3) 기존 .venv(Python 3.12 arm64, OpenCV)를 사용하고 패키지를 자동 교체하지 말라. 테스트는 모듈별 별도 프로세스로 실행하라.
+ 
+-1. [P0] 안전·정책 불일치 정리 — 사용자 결정 필요 항목
+-- 원래 지침은 "브라우저에 새 비행제어 엔드포인트를 추가하지 말라"였다. 그런데 tracking_dashboard.py는 mode_prepare / mode_commit / mode_cancel로 브라우저에서 비행 모드 변경 요청을 받는다. docs/tracking_monitor.md는 여전히 "새 브라우저 엔드포인트는 없다"고 적혀 있다.
+-- 이 항목은 코드를 임의로 지우거나 유지 확정하지 말고, 아래 두 안을 모두 구현 가능하게 설계하되 기본값은 A로 하라.
+-  A) 기본값: 브라우저 모드 변경 비활성. QSettings 키 tracking/web_mode_change(기본 false)가 true일 때만 mode_* 명령을 큐에 받는다. false이면 validate 단계에서 거부하고 페이지는 모드 버튼 대신 "앱 창에서만 모드 변경 가능" 안내를 표시한다. 설정을 바꾸는 UI는 PyQt Tracking 창에만 두고 브라우저에서는 바꿀 수 없게 하라.
+-  B) 활성 시: 기존 티켓·TTL·재검증·1회 송신·HEARTBEAT 확인 흐름을 유지하고, 추가로 commit 직전 선택 기체의 HEARTBEAT 신선도·모드·armed가 티켓과 같은지 다시 확인하라(이미 있으면 테스트로 증명하라).
+-- 로컬 프로세스는 GET / 로 토큰이 박힌 페이지를 받을 수 있다(기존 drive_dashboard와 같은 구조). 모드 변경이 켜진 경우에 한해 이 위험을 문서에 명시하고, 대시보드 시작 시 PyQt 창에 "브라우저 모드 변경 허용됨" 경고를 표시하라.
+-- 결정 결과와 남은 위험을 docs/tracking_monitor.md에 사실대로 갱신하라.
++1. [P0] 브라우저 비행 모드 변경 — 사용자 결정: 허용(2026-11-22)
++- 원래 지침은 "브라우저에 새 비행제어 엔드포인트를 추가하지 말라"였으나, 사용자가 브라우저 대시보드의 비행 모드 변경을 허용하기로 결정했다. 현재 tracking_dashboard.py의 mode_prepare / mode_commit / mode_cancel 흐름을 유지한다. 이 기능을 삭제하거나 기본 비활성으로 바꾸지 말라.
++- 허용 범위는 "비행 모드 변경 요청"뿐이다. ARM/DISARM, TAKEOFF, AUTO/MISSION 시작, RC·자세·위치·속도 명령, 파라미터 변경은 브라우저에서 계속 금지한다. flight_mode_controller.py의 OFFERED/DISABLED 목록을 유지하고 AUTO·TAKEOFF·MISSION이 브라우저 요청으로 절대 송신되지 않음을 테스트로 증명하라.
++- 기존 안전 흐름(확인 티켓, TTL, commit 직전 재검증, 1회 송신, 자동 재시도 없음, HEARTBEAT로 결과 확인)을 유지하라. commit 직전 선택 기체의 동일성(link/sysid/compid), HEARTBEAT 신선도, 현재 모드·armed가 티켓과 같지 않으면 송신하지 않는지 테스트로 증명하라. 요청 대상 기체 키가 현재 선택 기체와 다르면 거부하는 경로도 테스트하라.
++- 동시 조작 보호: PyQt 창과 브라우저(또는 브라우저 탭 2개)에서 동시에 모드 요청이 들어와도 한 번에 하나의 티켓만 유효하고, 다른 쪽 티켓은 무효화되는지 확인하라.
++- 감사 기록: 모든 모드 요청(prepare/commit/cancel/거부/결과)을 출처(app/web), 기체 식별자, 이전·목표 모드, armed, 결과와 함께 로그 저장 JSON에 남겨라.
++- 표시: 브라우저 대시보드가 켜져 있는 동안 PyQt Tracking 창에 "브라우저에서 비행 모드 변경 가능" 표시를 상시 띄워라. 브라우저 확인 패널에는 ARMED 상태일 때 경고를 더 크게(빨강) 표시하라.
++- 남은 위험을 문서화하라: 대시보드는 127.0.0.1 전용이지만 같은 Mac의 다른 로컬 프로세스는 GET /로 토큰이 들어간 페이지를 받을 수 있다(기존 drive_dashboard와 같은 구조). 이 위험과 완화책(대시보드는 필요할 때만 열고 사용 후 닫기)을 docs/tracking_monitor.md에 적어라.
++- docs/tracking_monitor.md의 "새 브라우저 엔드포인트는 없다" 문장을 실제 상태(Tracking 대시보드 · 모드 변경 허용 · 허용/금지 범위)로 고쳐라.
+ 
+ 2. [P0] 회귀 방지 테스트 추가(이번에 놓친 결함 재발 방지)
+ - tests/test_tracking_service.py: QApplication에서 TrackingService를 생성·자식 QTimer 생성·postEvent/processEvents를 거쳐도 예외가 없는지, QObject 메서드 이름(event, timerEvent, childEvent, eventFilter 등)을 덮어쓰는 메서드가 없는지 정적 검사를 포함하라. start_demo → TRACKING, simulate, intervention → STOPPED, set_vehicle 변경 시 세션 취소, shutdown 두 번 호출 안전성을 검증하라.
+-- tests/test_tracking_dashboard.py: 실제 LoopbackServer를 ephemeral 포트로 띄워 Host 불일치 403, 토큰 없음 403, Origin 불일치 403, 본문 초과·비JSON·알 수 없는 키·잘못된 ROI(NaN/Inf/음수)·잘못된 hex 400, 큐 초과 429, 정상 202, GET / 에 토큰 치환, /state JSON, /frame.jpg 의 X-Frame-Meta 형식을 검증하라. 1단계 A/B 설정별 mode_* 수락/거부도 포함하라.
++- tests/test_tracking_dashboard.py: 실제 LoopbackServer를 ephemeral 포트로 띄워 Host 불일치 403, 토큰 없음 403, Origin 불일치 403, 본문 초과·비JSON·알 수 없는 키·잘못된 ROI(NaN/Inf/음수)·잘못된 hex 400, 큐 초과 429, 정상 202, GET / 에 토큰 치환, /state JSON, /frame.jpg 의 X-Frame-Meta 형식을 검증하라. mode_*의 정상 수락과 금지 모드(AUTO/TAKEOFF/MISSION)·잘못된 기체 키·만료 티켓 거부도 포함하라.
+ - tests/test_tracking_html.py: tracking_dashboard.html에 외부 URL(http/https), 외부 폰트·스크립트·이미지 참조가 없는지, __DASHBOARD_TOKEN__ 자리표시자가 정확히 1개인지, 페이지가 사용하는 state 키(app, banner, video, tracking, simulation, vehicle, modes, sentinel, events)가 TrackingService.snapshot()이 실제로 만드는 키와 일치하는지 검사하라.
+ - 빌드 산출물 검사: Linker_mac.spec의 datas/hiddenimports에 tracking_dashboard.html과 tracking_* 모듈, dashboard_server, flight_mode_controller가 모두 들어 있는지 확인하는 테스트를 추가하라.
+ 
+@@ -56,7 +58,7 @@
+ - 생성된 wow_guide_mavlink.py, protocol XML, Sentinel 외부 소스를 수정하지 말라.
+ 
+ 완료 보고
+-- 실제 변경 파일, 1단계에서 적용한 기본값(A/B)과 남은 위험, 추가·수정한 테스트와 모듈별 실행 결과(통과/실패/스킵 이유)를 제시하라.
++- 실제 변경 파일, 1단계 브라우저 모드 변경의 허용/금지 범위와 남은 위험, 추가·수정한 테스트와 모듈별 실행 결과(통과/실패/스킵 이유)를 제시하라.
+ - PyQt Tracking 창과 브라우저 대시보드의 오프스크린 캡처를 tracking_validation/에 저장하라.
+ - 6단계 성능 측정값(해상도별 UI 스레드 ms)을 표로 제시하라.
+ - 합성 영상·녹화 영상 검증과 실제 HM30·SITL 검증을 구분하고, 실기 제어는 미구현임을 명시하라. 비행 준비 완료라고 선언하지 말라.
+--- stage3/Linker_mac.spec
++++ Linker_mac.spec
+@@ -25,7 +25,7 @@
+     ],
+     hiddenimports=[
+         'serial', 'serial.tools.list_ports', 'PyQt5.QtWebEngineWidgets', 'PyQt5.QtWebChannel',
+-        'tracking_models', 'tracking_core', 'tracking_worker', 'tracking_session', 'tracking_panel', 'flight_mode_controller', 'dashboard_server', 'tracking_dashboard', 'tracking_service',
++        'tracking_models', 'tracking_core', 'tracking_worker', 'tracking_session', 'tracking_simulation', 'tracking_panel', 'flight_mode_controller', 'dashboard_server', 'tracking_dashboard', 'tracking_service',
+         'cv2', 'fleet', 'fleet_panel', 'video_grid', 'platform_mac', 'drive_dashboard',
+         'pymavlink.dialects.v10.ardupilotmega', 'pymavlink.dialects.v20.ardupilotmega',
+     ],
+--- stage3/docs/tracking_monitor.md
++++ docs/tracking_monitor.md
+@@ -1,12 +1,59 @@
+ # Linker Tracking 구현·검증 기록 (2026-11-22)
++
++# (1단계 기록은 아래 「1단계」 절부터. 2·3단계 현재 상태를 먼저 적는다.)
+ 
+ ## 범위와 사용법
+ 
+-실제 `/Users/kimmunju/workspace/Linker_mac` 소스를 수정했다. 상단 **Tracking**은 새 관찰 화면이며 **Sentinel Legacy**는 기존 차량 장애물 경보 화면이다. `GuideVehiclePanel`, `VehicleSession`, `--guide-vehicle`, 기존 브라우저 대시보드와 그 토큰/Host 검증/Qt 요청 큐는 유지한다. 새 브라우저 엔드포인트는 없다.
++실제 `/Users/kimmunju/workspace/Linker_mac` 소스를 수정했다. 상단 **Tracking**은 새 관찰 화면이며 **Sentinel Legacy**는 기존 차량 장애물 경보 화면이다. `GuideVehiclePanel`, `VehicleSession`, `--guide-vehicle`, 기존 Legacy 브라우저 대시보드와 그 토큰/Host 검증/Qt 요청 큐는 유지한다. 2단계에서 **별도 Tracking 브라우저 대시보드**(`tracking_dashboard.py`)를 추가했고, 사용자 결정(2026-11-22)에 따라 이 대시보드에서 **비행 모드 변경 요청만** 허용한다. 허용/금지 범위와 남은 위험은 아래 「브라우저 비행 모드 변경」을 본다.
+ 
+ 시작 시 Tracking은 MONITOR ONLY/IDLE이며 카메라·기체·Guide를 연결하지 않는다. 기존 Fly 또는 CH0 저장 URL을 초기 입력으로 사용한다. 주소/transport를 확인하고 영상 연결 → ROI 선택 → 영상 내부 드래그 순으로 사용한다. 프리셋은 제품별 예시이며 실제 HM30 주소라는 의미가 아니다. 기본 카메라 모드는 **기체 고정·비짐벌**, 별도 선택은 **지상 고정**이다. 두 모드 모두 사용자 ROI 관찰만 수행하며 자동 후보 검출이나 배경 운동 보정은 없다.
+ 
+ 추적 정지는 관찰 결과와 모의 권한을 취소한다. LOST는 프레임이 돌아와도 복구되지 않고 새 ROI가 필요하다. 합성 모의 시험은 명시적 버튼으로만 시작하며 실제 입력과 구분해 SIMULATION으로 표시한다. 모의 출력 허용은 별도 조작이다. 로그 저장은 내부 관찰 및 모의 기록 JSON을 저장한다. source는 URL 대신 SHA256 식별자로 기록하며 자격증명 URL을 로그에 쓰지 않는다.
++
++
++## 2·3단계 현재 구조 (2026-11-22)
++
++- `tracking_service.py` `TrackingService`(Qt 스레드 단일 소유자): TrackingSession 1개, `_SharedCapture` 1개(같은 소스는 Fly·Video4CH와 디코더 공유), 선택 기체(읽기 전용), `FlightModeController`, 브라우저 명령 실행. `main_window.py`가 만들어 `TrackingPanel(self, service)`에 넘긴다. Sentinel Legacy(VehicleSession) 수명주기와 독립이다.
++- `tracking_panel.py` PyQt 창 · `tracking_dashboard.py`+`tracking_dashboard.html` 브라우저 화면 · `dashboard_server.py` 공통 loopback 계층(Legacy `drive_dashboard`도 사용) · `flight_mode_controller.py` 모드 변경 트랜잭션 · `tracking_simulation.py` 모의 출력(메모리/파일).
++- HTTP 스레드는 Qt 객체·추적기·기체를 만지지 않는다. 검증된 명령은 최대 16개 큐에 들어가고 Qt 스레드 `tick()`에서 실행된다.
++- `TrackingService.event()`라는 이름이 `QObject.event(QEvent)`를 덮어써 Qt 이벤트 수신 즉시 TypeError로 종료되던 결함은 `log_event()`로 해결했다. `tests/test_tracking_service.py`가 QObject/QWidget 메서드 이름 재정의를 정적으로 검사하고 postEvent/sendEvent/자식 QTimer를 실제로 통과시킨다(백업본의 `event` 정의를 검출함을 확인).
++- 상태 표시 규칙 통일: 합성 영상 또는 모의 출력 허용이면 SIMULATION(칩·배너·영상 표시 모두 `monitor_label()` 하나). 영상 프레임 나이가 추적 timeout 이상이면 STALE(이전에는 1초 기준이라 0.3~1초 구간이 LIVE로 보였음 — 캡처 검증 중 발견해 수정).
++
++## 브라우저 비행 모드 변경 (사용자 결정: 허용, 2026-11-22)
++
++허용: Tracking 대시보드의 `mode_prepare` → (브라우저 확인 패널, 체크박스) → `mode_commit`, `mode_cancel`. 대상은 `flight_mode_controller.OFFERED`에 있고 기체 펌웨어 매핑(ArduPilot: `mode_mapping_byname(mav_type)`, PX4: `px4_map`)에 실제 존재하는 모드뿐이다.
++
++금지(브라우저·PyQt 모두): ARM/DISARM, TAKEOFF, AUTO/MISSION 시작, OFFBOARD(사전 setpoint 스트림 필요 — 더미 setpoint 미송신), RC·자세·위치·속도 명령, 파라미터 변경, 원시 MAVLink 명령/메시지 ID 요청. HTTP 검증기는 정해진 action과 키만 받으며 알 수 없는 키를 400으로 거부한다. AUTO/TAKEOFF/MISSION은 검증기를 통과해도 컨트롤러에서 거부되고 송신 0건임을 테스트로 확인한다.
++
++안전 흐름(PyQt와 동일): 확인 티켓(TTL 30초) → commit 직전 재검증(같은 Vehicle 객체·link/sysid/compid·연결 epoch, 현재 선택 기체, HEARTBEAT 3초 이내, 티켓 발행 시점과 같은 모드·armed) → `MAV_CMD_DO_SET_MODE` 1회 송신 → 송신 후 도착한 해당 기체 HEARTBEAT의 모드로만 성공 판정. ACK ACCEPTED만으로 성공 처리하지 않으며 ACK 후 HEARTBEAT 3회 불일치는 FAILED, 5초 미확인은 TIMEOUT. 자동 재시도 없음, 기체당 60초 3회 한도.
++
++동시 조작: 유효 티켓은 항상 1개. 새 prepare(앱이든 브라우저 탭이든)는 이전 미확인 티켓을 무효화(SUPERSEDED 기록)하고, 무효 티켓 commit은 거부되며 유효 티켓은 유지된다. 티켓은 만든 화면에서만 확인할 수 있다(app 티켓을 web에서, web 티켓을 app에서 commit 불가). 요청 기체 키가 현재 선택 기체와 다르면 거부·기록한다.
++
++감사 기록: prepare/거부/무효화/송신/ACK/확인/취소/실패 각각을 출처(app/web), 기체 이름·link/sysid/compid·펌웨어·epoch, 이전·목표 모드, armed, 티켓, ACK와 함께 `mode_audit`에 남기고 「로그 저장」 JSON에 포함한다(최근 500건).
++
++표시: 대시보드가 켜져 있는 동안 PyQt 창 상단에 주황색으로 「브라우저 대시보드 URL · 같은 추적 세션 공유 중 · 브라우저에서 비행 모드 변경 가능」을 상시 표시하고 닫기/다시 열기 버튼을 둔다. 브라우저 확인 패널은 ARMED일 때 빨간 대형 경고를 표시한다. 기본 포트 8766이 사용 중이면 임의 포트로 열리며 실제 URL을 창과 이벤트 로그에 표시한다.
++
++**남은 위험**: 서버는 127.0.0.1에만 바인딩하고 Host/Origin/토큰을 검사하지만, 같은 Mac의 다른 로컬 프로세스는 `GET /`으로 토큰이 들어 있는 페이지를 받아 모드 변경 요청을 보낼 수 있다(기존 drive_dashboard와 같은 구조). 사용자 계정이 침해된 경우나 신뢰하지 않는 로컬 프로그램이 있으면 이 경로가 열린다. 완화책: 대시보드는 필요할 때만 열고 사용 후 「대시보드 닫기」로 끈다(서버 종료 시 브라우저 티켓도 취소). 모드 변경은 매번 확인 단계와 commit 직전 재검증을 거치고 감사 기록이 남지만, 이것이 로컬 프로세스 인증을 대신하지는 않는다. 향후 개선 후보: 페이지 로드 후 1회용 세션 쿠키(HttpOnly, SameSite=Strict) 교환, 또는 PyQt 창에서의 최종 승인 요구.
++
++PyQt 창을 닫을 때 대시보드가 열려 있으면 「창만 닫기(대시보드 유지) / 대시보드도 닫기 / 취소」를 묻는다.
++
++## ROI 선택 정책 (3단계)
++
++- 「ROI 선택」은 현재 프레임을 고정한다. PyQt와 브라우저 모두 같은 고정 프레임을 표시하고, 요청은 그 프레임의 source/session/frame_seq/width/height를 정확히 지정해야 한다.
++- 선택 시간 기본 8초(2~20초, 유한값 검증, PyQt에서 조정). 남은 시간을 두 화면에 크게 표시한다.
++- 따라잡기(catch-up): 고정 프레임에서 초기화한 뒤 고정 이후 보관한 프레임(최대 12개, 넘치면 솎아냄)을 순서대로 추적해 최신 프레임까지 따라간다. 보관 간격은 경과 시간이 길수록 커져 광류가 불안정해지므로 **고정 후 4초(`CATCHUP_SPAN_S`) 이내**에만 따라잡기를 한다.
++- 4초 초과~선택 시간 이내: ROI를 적용하지 않고 최신 프레임을 새로 고정해 「최신 프레임에서 다시 그리세요」를 안내한다. 선택 시간 초과도 같다. 따라잡기 중 특징점을 잃으면 LOST 대신 같은 안내로 재선택 상태가 된다. 어느 경우에도 다른 객체로 자동 전환하거나 이전 ROI를 새 프레임에 그대로 옮기지 않는다.
++- 민무늬 거부(insufficient_texture) 시 「무늬가 뚜렷한 곳(모서리·글자·경계)을 선택하세요」를 표시한다.
++
++## UI 스레드 성능 (3단계 측정, `tools/measure_tracking_ui.py`)
++
++`tracking_validation/perf_ui_thread.md`에 결과가 있다. 720p/1080p/4K 모두 Qt 스레드 p95가 33 ms 미만이어서 JPEG 인코딩(≤10 Hz, 1280 폭 축소)과 표시 변환을 별도 워커로 옮기지 않았다. 추적 입력 해상도는 바꾸지 않았다. 단, 4K에서는 광류 워커 처리 속도가 약 11 fps로 떨어져 처리 프레임 사이 이동량이 커지고 합성 시험에서도 LOST(incoherent_motion)가 났다. HM30 실제 해상도에서 재측정이 필요하다.
++
++## 녹화 재생 측정 (`tools/tracking_replay_metrics.py`)
++
++로컬 녹화 파일만 받는다(RTSP/네트워크 주소는 거부해 HM30에 자동 연결하지 않음). 지정 ROI를 한 번 적용하고 파일 FPS로 재생하며 프레임별 상태·사유·품질·처리 FPS·프레임 나이를 CSV로, 프레임 나이 p50/p95/최대·timeout 초과 수·LOST 사유 분포·추적 유지 시간을 `.summary.json`으로 남긴다. timeout 0.3초 적정성은 실제 HM30 녹화로 이 도구를 돌린 뒤 판단한다.
++
++# 1단계 기록
+ 
+ ## 변경 전 보호
+ 
+@@ -78,7 +125,7 @@
+ - 비행 파라미터/failsafe 변경은 별도 검토·승인·원복 계획 후 수행한다. 기존 설정을 자동으로 바꾸지 않는다. 자동 추격·접근·충돌 유도는 이 설계의 범위가 아니다.
+ - SITL/HIL 결과와 handover/failsafe 검토를 문서로 승인한 뒤에도 실기 시험은 별도 제한 구역·안전조종자·중단 절차·명시적 승인 아래 진행한다.
+ 
+-## 최종 결과 집계
++## 1단계 최종 결과 집계 (2단계 이후 결과는 tracking_validation/results.json)
+ 
+ 모듈별 독립 프로세스: **93개 실행, 87개 통과, 6개 오류, 스킵 0개**. 별도 HiDPI 실행은 Tracking UI 5개 통과이며 93개 집계에 중복 포함하지 않았다.
+ 
+--- stage3/flight_mode_controller.py
++++ flight_mode_controller.py
+@@ -22,6 +22,7 @@
+ (vehicle.master.mav → the Fleet link writer). No retries are performed automatically.
+ """
+ from dataclasses import dataclass
++from collections import deque
+ import threading
+ import time
+ import uuid
+@@ -132,6 +133,7 @@
+         self.request = None
+         self.history = {}
+         self.log = []
++        self.audit = deque(maxlen=500)   # every prepare/commit/cancel/reject/result, saved with the log
+         self.sent_count = 0
+ 
+     # ------------------------------------------------------------------ helpers
+@@ -178,47 +180,85 @@
+         lines.append("이 요청은 ARM·이륙·미션 시작을 수행하지 않으며 자동 재시도하지 않습니다.")
+         return lines
+ 
++    def _audit(self, event, detail, source=None, vehicle=None, mode=None, target=None):
++        target = target or self.request or self.ticket or {}
++        vehicle = vehicle if vehicle is not None else target.get("vehicle")
++        hb = getattr(vehicle, "heartbeat_state", None) or (None, None, None)
++        link = getattr(vehicle, "link", None)
++        self.audit.append(dict(
++            t_wall=time.time(), t_mono=self.clock(), event=event, detail=str(detail),
++            source=source or target.get("source"),
++            vehicle=None if vehicle is None else dict(
++                name=getattr(vehicle, "name", None), link_id=getattr(link, "link_id", None),
++                sysid=getattr(vehicle, "sysid", None), compid=getattr(vehicle, "compid", None),
++                firmware=firmware_name(vehicle), epoch=getattr(vehicle, "connection_epoch", None)),
++            from_mode=target.get("current_mode", hb[1]), to_mode=mode or target.get("mode"),
++            armed=target.get("armed", hb[2]), ticket=target.get("id"), ack=target.get("ack")))
++
+     def _finish(self, state, detail):
+         self.state, self.detail = state, detail
+         self.log.append(dict(t=self.clock(), state=state, detail=detail,
+                              mode=(self.request or self.ticket or {}).get("mode")))
+         del self.log[:-50]
++        self._audit(state, detail)
+         self.request = self.ticket = None   # every _finish state is terminal
+ 
+     # ------------------------------------------------------------------ API
+-    def prepare(self, vehicle, mode):
+-        """Validate and return a confirmation ticket. Nothing is sent."""
+-        with self.lock:
++    def prepare(self, vehicle, mode, source="app"):
++        """Validate and return a confirmation ticket. Nothing is sent.
++
++        Only one ticket is valid at a time: a new prepare (from the PyQt window or any browser
++        tab) supersedes and invalidates the previous unconfirmed ticket.
++        """
++        with self.lock:
++            mode = str(mode or "").upper()
+             if self.state == "REQUESTING":
++                self._audit("REJECTED_PREPARE", "이전 요청 결과 확인 중", source, vehicle, mode, target={})
+                 raise ModeRequestError("이전 모드 변경 요청을 확인 중입니다.")
+-            mode = str(mode or "").upper()
+-            hb = self._check(vehicle, mode)
+-            ticket = dict(id=uuid.uuid4().hex, mode=mode, vehicle=vehicle, identity=identity(vehicle),
++            try:
++                hb = self._check(vehicle, mode)
++            except ModeRequestError as exc:
++                self._audit("REJECTED_PREPARE", exc, source, vehicle, mode, target={})
++                raise
++            if self.ticket is not None:
++                self._audit("SUPERSEDED", f"새 요청({source})이 이전 확인 티켓을 무효화", target=self.ticket)
++            ticket = dict(id=uuid.uuid4().hex, mode=mode, vehicle=vehicle, identity=identity(vehicle), source=source,
+                           name=getattr(vehicle, "name", "?"), link_id=identity(vehicle)[1],
+                           sysid=vehicle.sysid, compid=vehicle.compid, firmware=firmware_name(vehicle),
+                           current_mode=hb[1], armed=hb[2], impact=self._impact(vehicle, hb, mode),
+                           expires=self.clock() + TICKET_TTL_S)
+             self.ticket = ticket
+-            self.state, self.detail = "CONFIRMING", f"{ticket['current_mode']} → {mode} 확인 대기"
++            self.state, self.detail = "CONFIRMING", f"{ticket['current_mode']} → {mode} 확인 대기 ({source})"
++            self._audit("PREPARE", self.detail)
+             return self.public_ticket(ticket)
+ 
+     @staticmethod
+     def public_ticket(ticket):
+         return {k: v for k, v in ticket.items() if k not in ("vehicle", "identity")}
+ 
+-    def cancel(self, reason="사용자 취소"):
+-        with self.lock:
+-            if self.state in ("CONFIRMING", "REQUESTING"):
+-                self._finish("CANCELLED", reason)
+-
+-    def commit(self, ticket_id):
++    def cancel(self, reason="사용자 취소", source=None):
++        """Cancels an unconfirmed ticket. A request already sent cannot be recalled: it is
++        recorded as CANCELLED here, but the vehicle may still apply it (shown to the operator)."""
++        with self.lock:
++            if self.state == "CONFIRMING":
++                self._finish("CANCELLED", f"{reason}" + (f" ({source})" if source else ""))
++            elif self.state == "REQUESTING":
++                self._finish("CANCELLED", f"{reason} · 이미 송신된 요청은 기체가 적용할 수 있음")
++
++    def commit(self, ticket_id, source="app"):
+         """Operator confirmed. Re-validate against the latest state, then send exactly once."""
+         with self.lock:
+             if self.state == "REQUESTING":
++                self._audit("REJECTED_COMMIT", "이미 송신 후 결과 확인 중", source, target={})
+                 raise ModeRequestError("이미 요청을 송신했고 결과를 확인 중입니다.")
+             ticket = self.ticket
+             if ticket is None or ticket_id != ticket["id"]:
+-                raise ModeRequestError("확인된 요청이 없거나 만료되었습니다. 다시 요청하세요.")
++                self._audit("REJECTED_COMMIT", "유효하지 않은(만료·무효화된) 티켓", source, target={})
++                raise ModeRequestError("확인된 요청이 없거나 만료·무효화되었습니다. 다시 요청하세요.")
++            if ticket.get("source") != source:
++                self._audit("REJECTED_COMMIT", f"{ticket.get('source')}에서 만든 티켓을 {source}에서 확인할 수 없음",
++                            source, target={})
++                raise ModeRequestError("다른 화면에서 만든 확인 요청입니다. 이 화면에서 다시 요청하세요.")
+             now = self.clock()
+             vehicle = ticket["vehicle"]
+             try:
+@@ -239,9 +279,10 @@
+             self.history[key] = recent + [now]
+             self._send(vehicle, ticket["mode"])
+             self.sent_count += 1
+-            self.request = dict(ticket, sent_at=self.clock(), ack=None, mismatches=0)
++            self.request = dict(ticket, sent_at=self.clock(), ack=None, mismatches=0, committed_by=source)
+             self.ticket = None
+-            self.state, self.detail = "REQUESTING", f"{ticket['mode']} 요청 송신 · HEARTBEAT 확인 대기"
++            self.state, self.detail = "REQUESTING", f"{ticket['mode']} 요청 송신 ({source}) · HEARTBEAT 확인 대기"
++            self._audit("SENT", self.detail, source)
+             return True
+ 
+     def _send(self, vehicle, mode):
+@@ -264,6 +305,7 @@
+             if success:
+                 request["ack"] = "ACCEPTED"
+                 self.detail = f"{request['mode']} ACK 수락 · 실제 모드는 HEARTBEAT로 확인 중"
++                self._audit("ACK", text)
+             elif "IN_PROGRESS" in text:
+                 request["ack"] = "IN_PROGRESS"
+             else:
+@@ -308,6 +350,6 @@
+             target = self.request or self.ticket
+             return dict(state=self.state, detail=self.detail,
+                         ticket=self.public_ticket(self.ticket) if self.ticket else None,
+-                        mode=target["mode"] if target else None,
++                        mode=target["mode"] if target else None, source=target.get("source") if target else None,
+                         ack=self.request["ack"] if self.request else None,
+                         log=[dict(entry) for entry in self.log[-8:]])
+--- stage3/tests/test_tracking_replay.py
++++ tests/test_tracking_replay.py
+@@ -41,3 +41,33 @@
+             finally:
+                 capture.release();session.close();session.worker.join(2);capture.join(2)
+                 self.assertFalse(capture.is_alive())
++
++
++class ReplayMetricsToolTest(unittest.TestCase):
++    """tools/tracking_replay_metrics.py on an encoded synthetic file (not HM30 evidence)."""
++    def test_csv_and_summary(self):
++        import csv, json, sys
++        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
++        import tracking_replay_metrics as tool
++        with TemporaryDirectory() as directory:
++            path = Path(directory) / 'clip.mp4'
++            writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*'mp4v'), 30, (320, 240))
++            texture = cv2.GaussianBlur(np.random.default_rng(9).integers(0, 256, (70, 70, 3), np.uint8), (3, 3), 1)
++            for i in range(60):
++                frame = np.zeros((240, 320, 3), np.uint8)
++                if i < 40:                                   # object vanishes → LOST reason recorded
++                    frame[80:150, 60 + i:130 + i] = texture
++                writer.write(frame)
++            writer.release()
++            out = Path(directory) / 'm.csv'
++            rows, summary = tool.run(str(path), (65, 80, 70, 70), select_frame=5, timeout=.5, out=out)
++            with out.open() as stream:
++                header = next(csv.reader(stream))
++            self.assertEqual(header, ['wall_s', 'frame_seq', 'state', 'reason', 'quality', 'processing_fps',
++                                      'frame_age_ms', 'processing_ms'])
++            self.assertTrue(any(r['state'] == 'TRACKING' for r in rows))
++            self.assertTrue(summary['lost_reasons'], summary)
++            self.assertIsNotNone(summary['frame_age_ms']['p95'])
++            self.assertEqual(json.loads(out.with_suffix('.summary.json').read_text())['frames'], 60)
++            with self.assertRaises(SystemExit):
++                tool.run('rtsp://192.168.144.25:8554/main', (1, 1, 10, 10))
+--- stage3/tests/test_tracking_session.py
++++ tests/test_tracking_session.py
+@@ -82,3 +82,96 @@
+     def test_source_clear_prevents_old_roi(self):
+         self.start();self.s.clear_source();self.s.select((45,35,60,60))
+         self.assertEqual(self.s.snapshot().reason,'no_frame')
++
++
++class SelectionPolicyTests(unittest.TestCase):
++    """Frozen-frame ROI: configurable window, bounded catch-up, redraw on the latest frame."""
++    def setUp(self):
++        import tracking_session as ts
++        self.ts = ts
++        self.s = TrackingSession(.3)
++        self.addCleanup(self.s.close)
++        rng = np.random.default_rng(7)
++        self.texture = rng.integers(0, 256, (60, 60, 3), np.uint8)
++
++    def frame(self, seq, received, x=50, noise=False):
++        pixels = np.zeros((160, 240, 3), np.uint8)
++        if noise:
++            pixels = np.random.default_rng(seq).integers(0, 256, pixels.shape, np.uint8)
++        else:
++            pixels[50:110, x:x+60] = self.texture
++        return FrameEnvelope.create('cam', 'sess', seq, pixels, received)
++
++    def test_window_default_range_and_validation(self):
++        self.assertEqual(self.s.selection_window, 8.0)
++        for bad in (1.9, 20.1, float('nan'), float('inf'), True, '8'):
++            with self.assertRaises(ValueError):
++                TrackingSession(.3, bad)
++            with self.assertRaises(ValueError):
++                self.s.set_selection_window(bad)
++        for good in (2, 20):
++            TrackingSession(.3, good).close()
++        self.s.set_selection_window(12)
++        self.assertEqual(self.s.selection_window, 12.0)
++
++    def test_countdown_and_catchup_within_span(self):
++        now = time.monotonic()
++        self.s.offer(self.frame(1, now - 1.0))
++        ref = self.s.begin_selection()
++        info = self.s.selection_info()
++        self.assertAlmostEqual(info['remaining_s'], 7.0, delta=.2)
++        self.assertGreater(info['catchup_remaining_s'], 2.5)
++        for seq, x in ((2, 52), (3, 54), (4, 56)):
++            self.s.offer(self.frame(seq, now - 1.0 + seq * .05, x))
++        self.s.offer(self.frame(5, time.monotonic(), 58))
++        ok, reason = self.s.select_roi((50, 50, 60, 60), ref)
++        self.assertTrue(ok, reason)
++        wait_for(lambda: self.s.snapshot().state == 'TRACKING')
++        r = self.s.snapshot()
++        self.assertEqual(r.frame_seq, 5)                     # caught up to the newest retained frame
++        self.assertAlmostEqual(r.bbox[0], 58, delta=1.5)
++
++    def test_long_elapsed_asks_redraw_on_latest_frame(self):
++        now = time.monotonic()
++        self.s.offer(self.frame(1, now - self.ts.CATCHUP_SPAN_S - .5))
++        ref = self.s.begin_selection()
++        latest = self.frame(2, time.monotonic(), 80)
++        self.s.offer(latest)
++        ok, reason = self.s.select_roi((50, 50, 60, 60), ref)
++        self.assertEqual((ok, reason), (False, 'selection_stale_redraw_latest'))
++        r = self.s.snapshot()
++        self.assertEqual(r.state, 'SELECTING'); self.assertIsNone(r.bbox)
++        self.assertIs(self.s.display_frame(), latest)       # the newest frame is frozen for redrawing
++
++    def test_expired_window_and_mismatched_reference(self):
++        now = time.monotonic()
++        self.s.offer(self.frame(1, now - 9))
++        ref = self.s.begin_selection()
++        self.assertEqual(self.s.select_roi((50, 50, 60, 60), ref), (False, 'selection_frame_expired_reselect'))
++        self.s.offer(self.frame(2, time.monotonic()))
++        ref = self.s.begin_selection()
++        wrong = ref[:2] + (ref[2] + 1,) + ref[3:]
++        self.assertEqual(self.s.select_roi((50, 50, 60, 60), wrong), (False, 'roi_frame_mismatch_reselect'))
++        self.assertEqual(self.s.snapshot().state, 'SELECTING')
++
++    def test_catchup_failure_reselects_without_switching_object(self):
++        now = time.monotonic()
++        self.s.offer(self.frame(1, now - .5))
++        ref = self.s.begin_selection()
++        self.s.offer(self.frame(2, now - .4, noise=True))   # scene changed completely
++        latest = self.frame(3, time.monotonic(), noise=True)
++        self.s.offer(latest)
++        self.assertTrue(self.s.select_roi((50, 50, 60, 60), ref)[0])
++        wait_for(lambda: self.s.snapshot().reason == 'catchup_failed_redraw_latest')
++        r = self.s.snapshot()
++        self.assertEqual(r.state, 'SELECTING'); self.assertIsNone(r.bbox)
++        self.assertIs(self.s.display_frame(), latest)
++
++    def test_catchup_memory_is_bounded(self):
++        now = time.monotonic()
++        self.s.offer(self.frame(1, now - 1))
++        self.s.begin_selection()
++        for seq in range(2, 80):
++            self.s.offer(self.frame(seq, now - 1 + seq * .01))
++            self.assertLessEqual(len(self.s.catchup), self.ts.CATCHUP_MAX)
++        self.assertEqual(self.s.catchup[-1].frame_seq, 79)
+--- stage3/tests/test_tracking_ui.py
++++ tests/test_tracking_ui.py
+@@ -90,7 +90,74 @@
+         panel.tick()
+         self.assertFalse(panel.session.sink.enabled)
+         self.assertEqual(panel.session.snapshot().state,'TRACKING')
+-        self.assertIn('stale',panel.telemetry_text());self.assertIn('—',panel.telemetry_text())
++        self.assertIn('STALE',panel.telemetry_text());self.assertIn('—',panel.telemetry_text())
+         panel.set_vehicle(None)
+         self.assertEqual(panel.session.snapshot().reason,'vehicle_changed')
+         panel.shutdown();panel.session.worker.join(2);panel.close()
++
++
++class PanelBehaviour(unittest.TestCase):
++    """Rebuilt Tracking window: transport rule, close choices, confirmed mode request, browser bar."""
++    @classmethod
++    def setUpClass(cls):
++        cls.app = QApplication.instance() or QApplication([])
++
++    def setUp(self):
++        self.panel = TrackingPanel()
++        self.addCleanup(self.finish)
++
++    def finish(self):
++        self.panel.shutdown()
++        self.panel.close()
++
++    def test_transport_disabled_for_device_and_file(self):
++        p = self.panel
++        for text, enabled in (('rtsp://192.168.144.25:8554/main', True), ('0', False),
++                              (str(Path(__file__)), False), ('', False)):
++            p.source.setText(text)
++            self.assertEqual(p.transport.isEnabled(), enabled, text)
++
++    def test_reason_text_and_tooltip(self):
++        p = self.panel
++        p.start_demo(); p.service.disconnect_source('source_changed'); p.refresh()
++        self.assertEqual(p.reason.text(), '영상 소스 변경')
++        self.assertIn('source_changed', p.reason.toolTip())
++        self.assertNotIn('source_changed', p.reason.text())
++        self.assertEqual(p.state_badge.text(), 'STOPPED')
++
++    def test_confirmed_mode_request_sends_once_and_cancel_sends_none(self):
++        import sys; sys.path.insert(0, str(Path(__file__).parent))
++        from test_tracking_service import FakeVehicle
++        p, v = self.panel, FakeVehicle(1)
++        p.set_vehicle(v); p.refresh()
++        p.mode_combo.setCurrentIndex(p.mode_combo.findData('LOITER'))
++        with patch.object(TrackingPanel, 'confirm_mode', return_value=False):
++            p.request_mode()
++        self.assertEqual((v.master.mav.sent, p.service.modes.state), ([], 'CANCELLED'))
++        with patch.object(TrackingPanel, 'confirm_mode', return_value=True) as confirm:
++            p.request_mode()
++        self.assertEqual(len(v.master.mav.sent), 1)
++        ticket = confirm.call_args[0][0]
++        self.assertEqual((ticket['current_mode'], ticket['mode'], ticket['source']), ('STABILIZE', 'LOITER', 'app'))
++        p.refresh()
++        self.assertFalse(p.mode_button.isEnabled())      # result pending: no second click
++        disabled = [p.mode_combo.itemText(i) for i in range(p.mode_combo.count()) if p.mode_combo.itemData(i) is None]
++        self.assertIn('AUTO (비활성)', disabled)
++
++    def test_browser_bar_and_close_choices(self):
++        p = self.panel
++        p.service.open_dashboard(('127.0.0.1', 0)); p.refresh()
++        self.assertIn('브라우저에서 비행 모드 변경 가능', p.web.text())
++        self.assertIn(p.service.dashboard.url, p.web.text())
++        p.show()
++        with patch.object(TrackingPanel, 'ask_close_choice', return_value='cancel'):
++            p.close()
++        self.assertTrue(p.isVisible())
++        p.start_demo()
++        with patch.object(TrackingPanel, 'ask_close_choice', return_value='keep'):
++            p.close()
++        self.assertFalse(p.isVisible()); self.assertIsNotNone(p.service.dashboard); self.assertTrue(p.service.demo)
++        p.show()
++        with patch.object(TrackingPanel, 'ask_close_choice', return_value='close_all'):
++            p.close()
++        self.assertIsNone(p.service.dashboard); self.assertFalse(p.service.demo)
+--- stage3/tracking_core.py
++++ tracking_core.py
+@@ -66,8 +66,8 @@
+     def _limit(self, max_age):
+         if max_age is None:
+             return self.max_age_s
+-        if type(max_age) not in (int, float) or not math.isfinite(max_age) or not 0 < max_age <= 10:
+-            raise ValueError("max_age must be in (0, 10] seconds")
++        if type(max_age) not in (int, float) or not math.isfinite(max_age) or not 0 < max_age <= 30:
++            raise ValueError("max_age must be in (0, 30] seconds")
+         return max_age
+ 
+     def _fresh(self, seq, received_at, now, max_age=None):
+--- stage3/tracking_dashboard.html
++++ tracking_dashboard.html
+@@ -3,7 +3,7 @@
+ <head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+-<title>Linker Tracking · MONITOR</title>
++<title>Linker Tracking / Telemetry</title>
+ <style>
+ /* Linker Tracking browser view. Self-contained: no external fonts, scripts or images.
+    Layout: header (mode + links) / banner / [video + controls | tracking metrics + vehicle + mode + events]. */
+@@ -75,6 +75,12 @@
+ #confirm.show { display:block; }
+ #confirm h3 { margin:0 0 8px; font-size:18px; color:var(--warn); }
+ #confirm ul { margin:8px 0; padding-left:20px; } #confirm li { margin:3px 0; font-weight:600; }
++#cf-armed { display:none; margin:10px 0; padding:12px 14px; border-radius:8px; background:#5a1424; border:3px solid var(--danger); color:#fff; font-size:22px; font-weight:900; line-height:1.3; }
++#cf-armed.show { display:block; }
++#confirm.armed { border-color:var(--danger); background:#2a0f17; }
++#countdown { display:none; margin-top:10px; padding:10px 14px; border-radius:10px; border:3px solid var(--accent); color:var(--accent); font-size:26px; font-weight:900; }
++#countdown.show { display:block; }
++#countdown small { display:block; font-size:15px; font-weight:700; color:var(--text); margin-top:2px; }
+ #confirm label { display:flex; gap:9px; align-items:center; font-weight:700; margin:10px 0; cursor:pointer; }
+ #confirm input { width:20px; height:20px; accent-color:var(--warn); }
+ #events { list-style:none; margin:0; padding:0; max-height:300px; overflow:auto; font-size:13.5px; }
+@@ -86,7 +92,7 @@
+ </head>
+ <body>
+ <header>
+-  <div class="brand">Linker <span>Tracking</span></div>
++  <div class="brand">Linker <span>Tracking</span> / Telemetry</div>
+   <span class="chip" id="c-monitor" data-tone="accent"><i></i><span>MONITOR ONLY</span></span>
+   <div class="spacer"></div>
+   <span class="chip" id="c-app"><i></i><span>앱 연결 확인 중</span></span>
+@@ -103,6 +109,7 @@
+         <canvas id="view" aria-label="추적 영상"></canvas>
+         <div id="novideo">영상 프레임 없음</div>
+       </div>
++      <div id="countdown" role="timer" aria-live="polite"></div>
+       <div class="frameinfo">
+         <span>source <b id="f-src">—</b></span><span>session <b id="f-ses">—</b></span>
+         <span>seq <b id="f-seq">—</b></span><span>해상도 <b id="f-res">—</b></span>
+@@ -157,7 +164,8 @@
+       <div class="note" id="mode-state">—</div>
+       <div id="confirm" role="alertdialog" aria-labelledby="cf-title">
+         <h3 id="cf-title">모드 변경 확인</h3>
+-        <div id="cf-target" style="font-family:var(--mono);font-weight:700"></div>
++        <div id="cf-target" style="font-family:var(--mono);font-weight:700;font-size:16px"></div>
++        <div id="cf-armed">ARMED · 비행 중일 수 있습니다. 승인 즉시 기체 거동이 바뀝니다.</div>
+         <ul id="cf-impact"></ul>
+         <label><input type="checkbox" id="cf-check"> 기체·현재 모드·영향을 확인했습니다</label>
+         <div class="controls" style="margin-top:4px">
+@@ -233,8 +241,13 @@
+   txt('f-res', v.width ? `${v.width}×${v.height}` : null);
+   txt('f-age', num(v.frame_age_ms, ' ms')); txt('f-fps', v.decode_fps);
+ 
++  const sel = t.selection, cd = $('countdown');
++  cd.classList.toggle('show', !!sel);
++  if (sel) cd.innerHTML = `ROI 선택 · 남은 시간 ${Math.ceil(sel.remaining_s)}초<small>${sel.catchup_remaining_s > 0
++    ? `고정 프레임에서 따라잡기 가능 ${Math.ceil(sel.catchup_remaining_s)}초 · 무늬가 뚜렷한 곳(모서리·글자·경계)을 선택하세요`
++    : '고정 후 시간이 길어 그리면 최신 프레임에서 다시 그리도록 안내됩니다'}</small>`;
+   const st = $('t-state'); st.dataset.s = t.state; txt('t-state', t.state); txt('t-reason', t.reason_text);
+-  txt('t-q', t.quality); txt('t-hold', num(t.hold_s, ' s')); txt('t-pfps', t.processing_fps);
++  txt('t-q', t.quality == null ? null : Number(t.quality).toFixed(2)); txt('t-hold', num(t.hold_s, ' s')); txt('t-pfps', t.processing_fps);
+   txt('t-err', t.image_error ? `${t.image_error[0]}, ${t.image_error[1]}` : null);
+   txt('t-bbox', t.bbox ? t.bbox.join(', ') : null); txt('t-class', t.object_class);
+   txt('t-timeout', num(t.timeout_s, ' s'));
+@@ -306,7 +319,7 @@
+     if (!m.options.length) box.innerHTML = '<span class="note">선택 기체가 없거나 펌웨어 모드 목록을 알 수 없습니다.</span>';
+     m.options.forEach(o => {
+       const b = document.createElement('button');
+-      b.className = 'btn' + (veh && veh.mode === o.name ? ' current' : ''); b.textContent = o.name;
++      b.className = 'btn' + (veh && veh.mode === o.name ? ' current' : ''); b.textContent = o.enabled ? o.name : `${o.name} (비활성)`;
+       b.disabled = !o.enabled || busy || blocked || (veh && veh.mode === o.name);
+       if (o.reason) b.title = o.reason;
+       b.addEventListener('click', () => post({action:'mode_prepare', mode:o.name, vehicle:veh.key}));
+@@ -314,11 +327,14 @@
+     });
+   }
+   txt('mode-state', `${ctl.state || dash} · ${ctl.detail || ''}${blocked && veh ? ' · HEARTBEAT stale: 요청 불가' : ''}`);
+-  const tk = ctl.state === 'CONFIRMING' ? ctl.ticket : null, cf = $('confirm');
++  const any = ctl.state === 'CONFIRMING' ? ctl.ticket : null;
++  const tk = any && any.source === 'web' ? any : null, cf = $('confirm');
++  if (any && !tk) txt('mode-state', `CONFIRMING · Linker 앱 창에서 확인 중인 요청이 있습니다 · ${ctl.detail || ''}`);
+   if (tk && cf.dataset.id !== tk.id) {
+     cf.dataset.id = tk.id; $('cf-check').checked = false; $('cf-ok').disabled = true;
+-    txt('cf-target', `${tk.name} · link #${tk.link_id} · ${tk.sysid}/${tk.compid} · ${tk.firmware}  ·  ${tk.current_mode} → ${tk.mode} · ${tk.armed ? 'ARMED' : 'DISARMED'}`);
++    txt('cf-target', `${tk.name} · link #${tk.link_id} · SYS ${tk.sysid}/COMP ${tk.compid} · ${tk.firmware}  ·  ${tk.current_mode} → ${tk.mode} · ${tk.armed ? 'ARMED' : 'DISARMED'}`);
+     $('cf-impact').innerHTML = (tk.impact || []).map(l => `<li>${esc(l)}</li>`).join('');
++    $('cf-armed').classList.toggle('show', !!tk.armed); cf.classList.toggle('armed', !!tk.armed);
+   }
+   if (!tk) cf.dataset.id = '';
+   cf.classList.toggle('show', !!tk);
+@@ -378,7 +394,7 @@
+     g.strokeStyle = '#ffce35'; g.lineWidth = 2.5; g.beginPath();
+     g.moveTo(X(meta.width / 2), Y(meta.height / 2)); g.lineTo(X(cx), Y(cy)); g.stroke();
+     g.fillStyle = '#ffce35'; g.beginPath(); g.arc(X(cx), Y(cy), 6, 0, 7); g.fill();
+-    label(g, X(bx), Y(by) - 8, `TRACKING · q ${state.tracking.quality ?? dash}`, '#39e19a');
++    label(g, X(bx), Y(by) - 8, `TRACKING · 품질 ${state.tracking.quality == null ? dash : Number(state.tracking.quality).toFixed(2)}`, '#39e19a');
+   } else if (state && (state.tracking.state === 'LOST' || state.tracking.state === 'ERROR')) {
+     label(g, L.x + 12, L.y + 30, `${state.tracking.state} · ${state.tracking.reason_text}`, '#ff5a78');
+   }
+--- stage3/tracking_dashboard.py
++++ tracking_dashboard.py
+@@ -60,7 +60,9 @@
+         ref = (_text(ref["source_id"], HEX), _text(ref["session_id"], HEX),
+                _int(ref["frame_seq"], 0, 2 ** 53), _int(ref["width"], 1, 16384), _int(ref["height"], 1, 16384))
+         if (not isinstance(roi, list) or len(roi) != 4
+-                or not all(type(v) in (int, float) and math.isfinite(v) for v in roi)):
++                or not all(type(v) in (int, float) and math.isfinite(v) for v in roi)
++                or roi[0] < 0 or roi[1] < 0 or roi[2] <= 0 or roi[3] <= 0
++                or roi[0] + roi[2] > ref[3] or roi[1] + roi[3] > ref[4]):
+             raise ValueError("invalid roi")
+         return dict(action=action, ref=ref, roi=tuple(float(v) for v in roi))
+     if action == "mode_prepare":
+--- stage3/tracking_panel.py
++++ tracking_panel.py
+@@ -1,16 +1,55 @@
+ """Monitor-only Qt view over the shared TrackingService.
+ 
+ The PyQt Tracking window and the browser dashboard show the same TrackingService (one
+-TrackingSession, one shared decoder). Vehicle objects stay read only.
++TrackingSession, one shared decoder). Vehicle objects stay read only; the only vehicle
++request is an explicitly confirmed flight mode change through the service.
++
++Readability: large bold text, high contrast, one value per label. State colours are shared
++with the browser: TRACKING green, SELECTING yellow, LOST/ERROR red, SIMULATION purple.
+ """
+ import time
+ import cv2
+ from PyQt5.QtCore import Qt, QSettings, QRectF, QPointF, QUrl, pyqtSignal
+-from PyQt5.QtGui import QImage, QPainter, QColor, QPen, QDesktopServices
+-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+-                            QPushButton, QComboBox, QDoubleSpinBox, QFileDialog)
++from PyQt5.QtGui import QImage, QPainter, QColor, QPen, QFont, QDesktopServices
++from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit,
++                             QPushButton, QComboBox, QDoubleSpinBox, QFileDialog, QSplitter,
++                             QScrollArea, QWidget, QGroupBox, QTabWidget, QListWidget, QListWidgetItem,
++                             QMessageBox, QSizePolicy)
+ from video_grid import VideoCanvas, VIDEO_SOURCES
+-from tracking_service import TrackingService, STALE_S
++from tracking_service import TrackingService, reason_text
++from tracking_session import SELECTION_WINDOW_RANGE
++from flight_mode_controller import ModeRequestError
++
++GREEN, YELLOW, RED, PURPLE, BLUE, ORANGE, MUTED = ('#3ee59a', '#ffd23f', '#ff5c7a', '#c9a2ff', '#8fd0ff',
++                                                  '#ffae4d', '#c9d1de')
++STATE_COLOR = {'TRACKING': GREEN, 'SELECTING': YELLOW, 'LOST': RED, 'ERROR': RED, 'STOPPED': BLUE, 'IDLE': BLUE}
++LEVEL_COLOR = {'ok': GREEN, 'info': BLUE, 'warn': YELLOW, 'danger': RED}
++DASH = '—'
++
++STYLE = """
++QDialog#trackingWindow { background:#0e1118; }
++QDialog#trackingWindow QLabel { color:#f5f7fb; font-size:16px; }
++QDialog#trackingWindow QLabel[role="key"] { color:#c9d1de; font-weight:600; }
++QDialog#trackingWindow QLabel[role="value"] { font-weight:800; font-family:Menlo; font-size:16px; }
++QDialog#trackingWindow QGroupBox { color:#ffd23f; font-size:18px; font-weight:900; border:2px solid #3a4352;
++    border-radius:10px; margin-top:26px; padding:10px 10px 10px 10px; background:#171b24; }
++QDialog#trackingWindow QGroupBox::title { subcontrol-origin:margin; subcontrol-position:top left; left:10px;
++    top:2px; padding:0 4px; color:#ffd23f; background:transparent; }
++QDialog#trackingWindow QPushButton { font-size:16px; font-weight:800; min-height:38px; padding:4px 12px;
++    color:#f5f7fb; background:#232a36; border:2px solid #4a5568; border-radius:8px; }
++QDialog#trackingWindow QPushButton:hover { border-color:#ffd23f; }
++QDialog#trackingWindow QPushButton:disabled { color:#6b7484; border-color:#2c3340; }
++QDialog#trackingWindow QPushButton[kind="primary"] { background:#ffd23f; color:#17140a; border-color:#ffd23f; }
++QDialog#trackingWindow QPushButton[kind="danger"] { background:#5a1424; border-color:#ff5c7a; }
++QDialog#trackingWindow QPushButton[kind="sim"] { border-color:#c9a2ff; color:#c9a2ff; }
++QDialog#trackingWindow QLineEdit, QDialog#trackingWindow QComboBox, QDialog#trackingWindow QDoubleSpinBox {
++    font-size:16px; font-weight:700; min-height:34px; color:#f5f7fb; background:#131821;
++    border:2px solid #4a5568; border-radius:7px; padding:2px 8px; }
++QDialog#trackingWindow QComboBox:disabled { color:#6b7484; }
++QDialog#trackingWindow QListWidget { font-size:15px; background:#131821; color:#f5f7fb; border:1px solid #3a4352; }
++QDialog#trackingWindow QTabBar::tab { font-size:15px; font-weight:800; padding:7px 16px; color:#c9d1de; }
++QDialog#trackingWindow QTabBar::tab:selected { color:#ffd23f; }
++"""
+ 
+ 
+ def image_geometry(iw, ih, ww, wh, zoom):
+@@ -22,11 +61,20 @@
+ 
+ 
+ def image_point(point, geometry):
+-    x,y,w,h,sx,sy,sw,sh = geometry
+-    px,py = point
++    x, y, w, h, sx, sy, sw, sh = geometry
++    px, py = point
+     if w <= 0 or h <= 0 or not x <= px <= x+w or not y <= py <= y+h:
+         return None
+     return sx+(px-x)*sw/w, sy+(py-y)*sh/h
++
++
++def chip_style(color, filled=False):
++    if filled:
++        return (f'QLabel{{background:{color};color:#111;font-size:15px;font-weight:900;'
++                f'border:2px solid {color};border-radius:13px;padding:3px 10px;}}')
++    return (f'QLabel{{background:#131821;color:{color};font-size:15px;font-weight:800;'
++            f'border:2px solid {color};border-radius:13px;padding:3px 10px;}}')
++
+ 
+ class TrackingCanvas(VideoCanvas):
+     roiSelected = pyqtSignal(tuple)
+@@ -36,6 +84,11 @@
+         self.selecting = False
+         self.anchor = self.drag = None
+         self.result = None
++        self.countdown = None
++        self.monitor = 'MONITOR ONLY'
++        # Keep the inherited zoom buttons compact even under the large-button window style.
++        self.zoom_controls.setStyleSheet('QPushButton{min-height:26px;padding:0;font-size:15px;font-weight:900;'
++                                         'color:#fff;background:#232a36;border:1px solid #6b7484;border-radius:6px;}')
+ 
+     def geometry_map(self):
+         if self.image is None:
+@@ -45,97 +98,285 @@
+     def mousePressEvent(self, event):
+         g = self.geometry_map()
+         if self.selecting and event.button() == Qt.LeftButton and g:
+-            self.anchor = image_point((event.x(),event.y()), g)
++            self.anchor = image_point((event.x(), event.y()), g)
+             self.drag = self.anchor
+ 
+     def mouseMoveEvent(self, event):
+         if self.anchor and self.geometry_map():
+-            self.drag = image_point((event.x(),event.y()), self.geometry_map())
++            self.drag = image_point((event.x(), event.y()), self.geometry_map())
+             self.update()
+ 
+     def mouseReleaseEvent(self, event):
+         if self.anchor and self.geometry_map():
+-            end = image_point((event.x(),event.y()), self.geometry_map())
++            end = image_point((event.x(), event.y()), self.geometry_map())
+             if end:
+-                a,b = self.anchor, end
+-                self.roiSelected.emit((min(a[0],b[0]),min(a[1],b[1]),abs(a[0]-b[0]),abs(a[1]-b[1])))
++                a, b = self.anchor, end
++                self.roiSelected.emit((min(a[0], b[0]), min(a[1], b[1]), abs(a[0]-b[0]), abs(a[1]-b[1])))
+                 self.selecting = False
+         self.anchor = self.drag = None
+         self.update()
++
++    def _label(self, p, x, y, text, color, size=16):
++        p.setFont(QFont(self.font().family(), size, QFont.Black))
++        fm = p.fontMetrics()
++        w = fm.horizontalAdvance(text) + 14
++        p.fillRect(QRectF(x, y, w, fm.height() + 6), QColor(0, 0, 0, 200))
++        p.setPen(QColor(color))
++        p.drawText(QPointF(x + 7, y + 3 + fm.ascent()), text)
+ 
+     def paintEvent(self, event):
+         super().paintEvent(event)
+         g = self.geometry_map()
+         if not g:
+             return
+-        x,y,w,h,sx,sy,sw,sh = g
+-        def point(a,b): return QPointF(x+(a-sx)*w/sw,y+(b-sy)*h/sh)
++        x, y, w, h, sx, sy, sw, sh = g
++
++        def point(a, b):
++            return QPointF(x+(a-sx)*w/sw, y+(b-sy)*h/sh)
+         p = QPainter(self)
+-        p.setClipRect(QRectF(x,y,w,h))
+-        p.setPen(QPen(QColor('#6c8ca1'),1))
+-        p.drawLine(QPointF(x+w/2,y),QPointF(x+w/2,y+h))
+-        p.drawLine(QPointF(x,y+h/2),QPointF(x+w,y+h/2))
+-        p.setPen(QPen(QColor('#00ffbb'),2))
+-        if self.result and self.result.bbox:
+-            bx,by,bw,bh = self.result.bbox
+-            p.drawRect(QRectF(point(bx,by),point(bx+bw,by+bh)))
+-            for a,b in zip(self.result.trail,self.result.trail[1:]):
+-                p.drawLine(point(*a),point(*b))
++        p.setRenderHint(QPainter.Antialiasing, True)
++        p.setClipRect(QRectF(x, y, w, h))
++        p.setPen(QPen(QColor(255, 255, 255, 140), 1.5, Qt.DashLine))
++        p.drawLine(QPointF(x+w/2, y), QPointF(x+w/2, y+h))
++        p.drawLine(QPointF(x, y+h/2), QPointF(x+w, y+h/2))
++        r = self.result
++        if r and r.bbox:
++            bx, by, bw, bh = r.bbox
++            rect = QRectF(point(bx, by), point(bx+bw, by+bh))
++            p.setPen(QPen(QColor('#000'), 6)); p.drawRect(rect)
++            p.setPen(QPen(QColor(GREEN), 3.5)); p.drawRect(rect)
++            p.setPen(QPen(QColor(255, 210, 63, 200), 2.5))
++            for a, b in zip(r.trail, r.trail[1:]):
++                p.drawLine(point(*a), point(*b))
++            cx, cy = r.center
++            p.setPen(QPen(QColor(YELLOW), 2.5))
++            p.drawLine(point(sx + sw/2, sy + sh/2), point(cx, cy))
++            self._label(p, rect.left(), max(y + 2, rect.top() - 32), f'TRACKING · 품질 {r.quality:.2f}', GREEN)
+         if self.anchor and self.drag:
+-            p.setPen(QPen(QColor('#ffcf57'),2,Qt.DashLine))
+-            p.drawRect(QRectF(point(*self.anchor),point(*self.drag)).normalized())
++            p.setPen(QPen(QColor(YELLOW), 3, Qt.DashLine))
++            p.drawRect(QRectF(point(*self.anchor), point(*self.drag)).normalized())
++        if self.countdown:
++            self._label(p, x + 12, y + 12, self.countdown, YELLOW, 22)
++        color = PURPLE if self.monitor == 'SIMULATION' else YELLOW
++        self._label(p, x + 12, y + h - 44, self.monitor, color)   # bottom-left: zoom buttons sit bottom-right
+         p.end()
++
+ 
+ class TrackingPanel(QDialog):
+     """PyQt Tracking window. All state lives in TrackingService (shared with the browser)."""
+ 
+     def __init__(self, parent=None, service=None):
+         super().__init__(parent)
+-        self.setWindowTitle('Linker · Tracking · MONITOR ONLY')
+-        self.resize(1100, 760)
++        self.setObjectName('trackingWindow')
++        self.setStyleSheet(STYLE)
++        self.setWindowTitle('Linker Tracking')
++        self.resize(1440, 900)
+         self.owns_service = service is None
+         self.service = service or TrackingService(self)
+         self._image_key = None
+         self._pinned_ref = None
++        self._mode_key = None
++        self._event_key = None
+         self.closed = False
+-        layout = QVBoxLayout(self)
+-        row = QHBoxLayout()
+-        self.source = QLineEdit()
++        root = QVBoxLayout(self)
++        root.setSpacing(8)
++
++        # ---- status chips ----
++        chips = QHBoxLayout()
++        self.chips = {}
++        for name in ('monitor', 'app', 'video', 'vehicle', 'heartbeat', 'mode', 'armed', 'tracking', 'sentinel'):
++            label = QLabel(DASH)
++            self.chips[name] = label
++            chips.addWidget(label)
++        chips.addStretch(1)
++        root.addLayout(chips)
++        self.banner = QLabel('상태 확인 중')
++        self.banner.setWordWrap(True)
++        root.addWidget(self.banner)
++        # ---- browser dashboard bar ----
++        web = QHBoxLayout()
++        self.web = QLabel('브라우저 대시보드 꺼짐')
++        self.web.setTextInteractionFlags(Qt.TextSelectableByMouse)
++        self.web.setWordWrap(True)
++        self.web_open = self._button('브라우저 대시보드 열기', self.open_browser)
++        self.web_close = self._button('대시보드 닫기', self.close_browser, 'danger')
++        web.addWidget(self.web, 1); web.addWidget(self.web_open); web.addWidget(self.web_close)
++        root.addLayout(web)
++
++        # ---- body: video | controls ----
++        split = QSplitter(Qt.Horizontal)
++        self.canvas = TrackingCanvas(self)
++        self.canvas.roiSelected.connect(self.session_select)
++        split.addWidget(self.canvas)
++        side = QWidget()
++        side_layout = QVBoxLayout(side)
++        side_layout.addWidget(self._source_box())
++        side_layout.addWidget(self._tracking_box())
++        side_layout.addWidget(self._mode_box())
++        side_layout.addWidget(self._vehicle_box())
++        side_layout.addStretch(1)
++        scroll = QScrollArea()
++        scroll.setWidget(side)
++        scroll.setWidgetResizable(True)
++        scroll.setMinimumWidth(440)
++        split.addWidget(scroll)
++        split.setStretchFactor(0, 3)
++        split.setStretchFactor(1, 1)
++        split.setSizes([960, 500])          # video is the main work area
++        bottom = QTabWidget()
++        self.events = QListWidget()
++        self.diag = QLabel(DASH)
++        self.diag.setTextInteractionFlags(Qt.TextSelectableByMouse)
++        self.diag.setWordWrap(True)
++        self.diag.setAlignment(Qt.AlignTop | Qt.AlignLeft)
++        bottom.addTab(self.events, '이벤트')
++        diag_scroll = QScrollArea(); diag_scroll.setWidget(self.diag); diag_scroll.setWidgetResizable(True)
++        bottom.addTab(diag_scroll, '진단')
++        vsplit = QSplitter(Qt.Vertical)
++        vsplit.addWidget(split)
++        vsplit.addWidget(bottom)
++        vsplit.setStretchFactor(0, 4)
++        vsplit.setStretchFactor(1, 1)
++        root.addWidget(vsplit, 1)
++        # The service owns the 33 ms tick; this view only redraws when it changes.
++        self.service.changed.connect(self.refresh)
++        self.refresh()
++
++    # ---- construction helpers ----
++    def _button(self, text, slot, kind=None):
++        button = QPushButton(text)
++        if kind:
++            button.setProperty('kind', kind)
++        button.clicked.connect(slot)
++        return button
++
++    @staticmethod
++    def _grid(rows):
++        grid = QGridLayout()
++        grid.setHorizontalSpacing(14)
++        grid.setVerticalSpacing(6)
++        labels = {}
++        for i, (key, title) in enumerate(rows):
++            k = QLabel(title); k.setProperty('role', 'key')
++            v = QLabel(DASH); v.setProperty('role', 'value'); v.setWordWrap(True)
++            v.setTextInteractionFlags(Qt.TextSelectableByMouse)
++            grid.addWidget(k, i, 0, Qt.AlignTop)
++            grid.addWidget(v, i, 1)
++            labels[key] = v
++        grid.setColumnStretch(1, 1)
++        return grid, labels
++
++    def _source_box(self):
++        box = QGroupBox('영상 소스')
++        layout = QVBoxLayout(box)
+         settings = QSettings('WowDrone', 'LinkerGCS')
+-        self.source.setText(settings.value('video/fly/url', '', str) or settings.value('video/ch0/url', '', str))
+-        self.source.setPlaceholderText('기존 RTSP / 파일 / 장치 주소 — 수동 연결')
+         self.sources = QComboBox()
+         for title, value in VIDEO_SOURCES:
+             self.sources.addItem(title, value)
++        self.sources.setToolTip('제품별 예시 주소입니다. 실제 HM30 주소라는 뜻이 아닙니다.')
++        self.source = QLineEdit()
++        self.source.setText(settings.value('video/fly/url', '', str) or settings.value('video/ch0/url', '', str))
++        self.source.setPlaceholderText('RTSP 주소 / 파일 경로 / 장치 번호')
+         self.sources.currentIndexChanged.connect(lambda i: self.source.setText(self.sources.itemData(i) or ''))
++        self.source.textChanged.connect(self._sync_transport)
+         self.transport = QComboBox(); self.transport.addItems(['tcp', 'udp'])
+         self.transport.setCurrentText(settings.value('video/ch0/transport', 'tcp', str))
+         self.mount = QComboBox(); self.mount.addItems(['기체 고정 · 비짐벌', '지상 고정'])
+         self.mount.currentIndexChanged.connect(self.change_mount)
+-        for widget in (self.sources, self.source, self.transport, self.mount):
+-            row.addWidget(widget)
++        row = QHBoxLayout(); row.addWidget(self.transport); row.addWidget(self.mount, 1)
++        buttons = QHBoxLayout()
++        for widget in (self._button('영상 연결', self.connect_source, 'primary'),
++                       self._button('영상 해제', self.disconnect_source),
++                       self._button('합성 모의 영상', self.start_demo, 'sim')):
++            buttons.addWidget(widget)
++        for item in (self.sources, self.source):
++            layout.addWidget(item)
+         layout.addLayout(row)
++        layout.addLayout(buttons)
++        self._sync_transport(self.source.text())
++        return box
++
++    def _tracking_box(self):
++        box = QGroupBox('추적 (영상 관찰 · 기체 제어 없음)')
++        layout = QVBoxLayout(box)
++        head = QHBoxLayout()
++        self.state_badge = QLabel(DASH)
++        self.state_badge.setAlignment(Qt.AlignCenter)
++        self.state_badge.setMinimumWidth(190)
++        self.reason = QLabel(DASH); self.reason.setWordWrap(True)
++        self.reason.setStyleSheet('QLabel{font-size:17px;font-weight:800;}')
++        head.addWidget(self.state_badge); head.addWidget(self.reason, 1)
++        layout.addLayout(head)
++        self.countdown = QLabel('')
++        self.countdown.setStyleSheet(f'QLabel{{color:{YELLOW};font-size:26px;font-weight:900;}}')
++        self.countdown.setWordWrap(True)
++        layout.addWidget(self.countdown)
++        grid, self.track = self._grid([('quality', '품질(잔존 특징점)'), ('hold', '유지 시간'),
++                                       ('pfps', '처리 FPS'), ('error', '영상 중심 오차 x, y'),
++                                       ('age', '프레임 나이'), ('dfps', '영상 수신 FPS'),
++                                       ('cls', '객체 종류'), ('sim', '모의 출력')])
++        layout.addLayout(grid)
++        note = QLabel('품질은 특징점 잔존·이동 일관성 지표이며 객체 확률이 아닙니다. 오차는 영상 기준(오른쪽·아래 +)이며 '
++                      '각도·거리가 아닙니다.')
++        note.setWordWrap(True); note.setStyleSheet(f'QLabel{{color:{MUTED};font-size:14px;}}')
++        layout.addWidget(note)
++        rows = [[('ROI 선택', self.selecting, 'primary'), ('선택 취소', self.cancel_selection, None),
++                 ('추적 정지', self.operator_stop, None)],
++                [('조종자 개입', self.intervention, 'danger'), ('모의 출력 허용', self.simulate, 'sim'),
++                 ('모의 출력 해제', self.revoke_simulation, None)],
++                [('로그 저장', self.save, None)]]
++        self.buttons = {}
++        for row in rows:
++            line = QHBoxLayout()
++            for title, slot, kind in row:
++                self.buttons[title] = self._button(title, slot, kind)
++                line.addWidget(self.buttons[title])
++            layout.addLayout(line)
++        line = QHBoxLayout()
++        self.timeout = QDoubleSpinBox(); self.timeout.setRange(.05, 10); self.timeout.setDecimals(2)
++        self.timeout.setValue(self.service.session.timeout); self.timeout.setSuffix(' s 지연 한도')
++        self.timeout.setSingleStep(.05)
++        self.timeout.setToolTip('이 시간보다 오래된 프레임·처리 결과는 LOST로 처리합니다 (HM30 실측 후 조정 필요)')
++        self.timeout.valueChanged.connect(self.change_timeout)
++        self.window = QDoubleSpinBox(); self.window.setRange(*SELECTION_WINDOW_RANGE); self.window.setDecimals(0)
++        self.window.setValue(self.service.session.selection_window); self.window.setSuffix(' s 선택 시간')
++        self.window.setToolTip('ROI 선택 버튼을 누른 뒤 고정 프레임에 그릴 수 있는 시간')
++        self.window.valueChanged.connect(self.service.set_selection_window)
++        line.addWidget(self.timeout); line.addWidget(self.window)
++        layout.addLayout(line)
++        return box
++
++    def _mode_box(self):
++        box = QGroupBox('비행 모드 (사용자 요청 시에만)')
++        layout = QVBoxLayout(box)
++        self.current_mode = QLabel(DASH)
++        self.current_mode.setStyleSheet('QLabel{font-size:22px;font-weight:900;}')
++        layout.addWidget(self.current_mode)
+         row = QHBoxLayout()
+-        for title, callback in [('영상 연결', self.connect_source), ('영상 해제', self.disconnect_source),
+-                                ('ROI 선택', self.selecting), ('추적 정지', self.operator_stop),
+-                                ('합성 모의 시험', self.start_demo), ('모의 출력 허용', self.simulate),
+-                                ('조종자 개입', lambda: self.service.stop('operator_intervention')),
+-                                ('로그 저장', self.save), ('브라우저 대시보드', self.open_browser)]:
+-            button = QPushButton(title); button.clicked.connect(callback); row.addWidget(button)
+-        self.timeout = QDoubleSpinBox(); self.timeout.setRange(.05, 10); self.timeout.setDecimals(2)
+-        self.timeout.setValue(self.service.session.timeout); self.timeout.setSuffix(' s timeout')
+-        self.timeout.setSingleStep(.05)
+-        self.timeout.valueChanged.connect(self.change_timeout); row.addWidget(self.timeout)
++        self.mode_combo = QComboBox()
++        self.mode_button = self._button('모드 변경 요청', self.request_mode, 'primary')
++        row.addWidget(self.mode_combo, 1); row.addWidget(self.mode_button)
+         layout.addLayout(row)
+-        self.status = QLabel('MONITOR ONLY · IDLE · UNKNOWN'); layout.addWidget(self.status)
+-        self.canvas = TrackingCanvas(self); layout.addWidget(self.canvas, 1)
+-        self.canvas.roiSelected.connect(self.session_select)
+-        self.links = QLabel('영상 — · Pixhawk — · Sentinel Legacy —'); layout.addWidget(self.links)
+-        self.telemetry = QLabel('기체 미선택 —'); self.telemetry.setWordWrap(True); layout.addWidget(self.telemetry)
+-        self.web = QLabel('브라우저 대시보드 꺼짐'); self.web.setTextInteractionFlags(Qt.TextSelectableByMouse)
+-        layout.addWidget(self.web)
+-        # The service owns the 33 ms tick; this view only redraws when it changes.
+-        self.service.changed.connect(self.refresh)
++        self.mode_state = QLabel(DASH); self.mode_state.setWordWrap(True)
++        layout.addWidget(self.mode_state)
++        note = QLabel('ARM·이륙·미션 시작을 하지 않으며 자동 재시도하지 않습니다. 결과는 기체 HEARTBEAT로 확인합니다.')
++        note.setWordWrap(True); note.setStyleSheet(f'QLabel{{color:{MUTED};font-size:14px;}}')
++        layout.addWidget(note)
++        return box
++
++    def _vehicle_box(self):
++        box = QGroupBox('선택 기체 (읽기 전용)')
++        layout = QVBoxLayout(box)
++        grid, self.veh = self._grid([('name', '기체'), ('link', '링크'), ('ids', 'SYS / COMP'),
++                                     ('fw', '펌웨어'), ('hb', 'HEARTBEAT'), ('mode', '실제 모드'),
++                                     ('armed', '시동'), ('rc', 'RC override'), ('att', '자세 R/P/Y'),
++                                     ('alt', '고도 상대 / MSL'), ('gs', '지상속도'), ('gps', 'GPS'),
++                                     ('bat', '배터리'), ('pos', '위치')])
++        layout.addLayout(grid)
++        self.alt_note = QLabel(DASH); self.alt_note.setWordWrap(True)
++        self.alt_note.setStyleSheet(f'QLabel{{color:{MUTED};font-size:14px;}}')
++        layout.addWidget(self.alt_note)
++        return box
+ 
+     # ---- compatibility accessors (tests and main window use these names) ----
+     @property
+@@ -159,6 +400,11 @@
+         self.service.demo = bool(value)
+ 
+     # ---- operator actions ----
++    def _sync_transport(self, text):
++        applies = TrackingService.transport_applies(text)
++        self.transport.setEnabled(applies)
++        self.transport.setToolTip('RTSP 전송 방식' if applies else '카메라 장치·파일에는 적용되지 않습니다')
++
+     def change_mount(self):
+         self.service.mount = self.mount.currentText()
+         self.service.stop('camera_mode_changed')
+@@ -170,6 +416,10 @@
+         self._pinned_ref = self.service.begin_selection()
+         self.canvas.selecting = self._pinned_ref is not None
+ 
++    def cancel_selection(self):
++        self.canvas.selecting = False
++        self.service.stop('selection_cancelled')
++
+     def session_select(self, roi):
+         self.service.select_roi(roi, self._pinned_ref)
+         self._pinned_ref = None
+@@ -178,14 +428,19 @@
+         self.canvas.selecting = False
+         self.service.stop('operator_stop')
+ 
++    def intervention(self):
++        self.canvas.selecting = False
++        self.service.stop('operator_intervention')
++
+     def disconnect_source(self):
+         self.service.disconnect_source()
+         self._image_key = None
+-        self.canvas.clear()
++        self.canvas.clear('영상 해제됨 · 영상 연결 버튼으로 다시 연결')
+ 
+     def connect_source(self):
+         self._image_key = None
+-        self.service.connect_source(self.source.text(), self.transport.currentText())
++        transport = self.transport.currentText() if self.transport.isEnabled() else None
++        self.service.connect_source(self.source.text(), transport)
+ 
+     def start_demo(self):
+         self._image_key = None
+@@ -194,6 +449,9 @@
+     def simulate(self):
+         self.service.simulate()
+ 
++    def revoke_simulation(self):
++        self.service.session.revoke_simulation('operator_revoke')
++
+     def pixhawk_fresh(self):
+         return self.service.pixhawk_fresh()
+ 
+@@ -202,8 +460,49 @@
+ 
+     def open_browser(self):
+         url = self.service.open_dashboard()
+-        self.web.setText(f'브라우저 대시보드 · {url} · 같은 추적 세션을 표시합니다')
+         QDesktopServices.openUrl(QUrl(url))
++        self.refresh()
++
++    def close_browser(self):
++        self.service.close_dashboard()
++        self.refresh()
++
++    # ---- flight mode request (explicit, confirmed) ----
++    def request_mode(self):
++        mode = self.mode_combo.currentData()
++        if not mode:
++            return
++        try:
++            ticket = self.service.prepare_mode(mode, 'app')
++        except ModeRequestError as exc:
++            self.mode_state.setText(f'요청 거부 · {exc}')
++            return
++        if self.confirm_mode(ticket):
++            try:
++                self.service.commit_mode(ticket['id'], 'app')
++            except ModeRequestError as exc:
++                self.mode_state.setText(f'송신 안 함 · {exc}')
++        else:
++            self.service.cancel_mode('사용자 취소', 'app')
++
++    def confirm_mode(self, ticket):
++        """Modal confirmation (patched in tests). Default button is No."""
++        armed = ticket['armed']
++        warn = ('<p style="color:#ff5c7a;font-size:22px;font-weight:900">ARMED · 비행 중일 수 있습니다. '
++                '승인 즉시 기체 거동이 바뀝니다.</p>' if armed else
++                '<p style="font-size:17px;font-weight:800">DISARMED · 모드만 바뀌며 시동·이륙하지 않습니다.</p>')
++        items = ''.join(f'<li>{line}</li>' for line in ticket['impact'])
++        text = (f'<p style="font-size:18px;font-weight:800">{ticket["name"]} · link #{ticket["link_id"]} · '
++                f'SYS {ticket["sysid"]} / COMP {ticket["compid"]} · {ticket["firmware"]}</p>'
++                f'<p style="font-size:22px;font-weight:900">{ticket["current_mode"]} → {ticket["mode"]}</p>'
++                f'{warn}<ul style="font-size:16px">{items}</ul>')
++        box = QMessageBox(QMessageBox.Warning if armed else QMessageBox.Question, '비행 모드 변경 확인', text,
++                          QMessageBox.Yes | QMessageBox.No, self)
++        box.setTextFormat(Qt.RichText)
++        box.button(QMessageBox.Yes).setText('요청 1회 송신')
++        box.button(QMessageBox.No).setText('취소')
++        box.setDefaultButton(QMessageBox.No)
++        return box.exec_() == QMessageBox.Yes
+ 
+     def tick(self):
+         """Advance the shared service once (normally driven by its own timer)."""
+@@ -211,9 +510,19 @@
+             self.service.tick()
+ 
+     # ---- view ----
++    def _chip(self, name, text, color, filled=False, tip=''):
++        label = self.chips[name]
++        style = chip_style(color, filled)
++        if label.styleSheet() != style:
++            label.setStyleSheet(style)
++        if label.text() != text:
++            label.setText(text)
++        label.setToolTip(tip)
++
+     def refresh(self):
+         if self.closed:
+             return
++        snap = self.service.snapshot()
+         frame, result = self.service.view()
+         if frame is not None:
+             key = frame.session_id, frame.frame_seq
+@@ -222,54 +531,216 @@
+                 rgb = cv2.cvtColor(frame.pixels, cv2.COLOR_BGR2RGB)
+                 self.canvas.set_image(QImage(rgb.data, frame.width, frame.height, rgb.strides[0],
+                                              QImage.Format_RGB888).copy())
+-        state = self.session.snapshot()
+-        if state.state != 'SELECTING' and self.canvas.selecting:
++        elif self._image_key is not None or self.canvas.image is None:
++            self._image_key = None
++            self.canvas.clear('영상 없음 · 오른쪽 영상 소스에서 연결하세요')
++        t, v, veh = snap['tracking'], snap['video'], snap['vehicle']
++        if t['state'] != 'SELECTING' and self.canvas.selecting:
+             self.canvas.selecting = False
++        sel = t.get('selection')
++        self.canvas.countdown = (f'ROI 선택 · 남은 {sel["remaining_s"]:.0f}초' if sel else None)
++        self.canvas.monitor = snap['app']['monitor']
+         self.canvas.result = result
+         self.canvas.update()
+-        live = self.session.frame
+-        age = time.monotonic() - live.decoder_received_monotonic if live else None
+-        label = 'SIMULATION' if self.service.demo or self.session.sink.enabled else 'MONITOR ONLY'
+-        age_text = f'{age * 1000:.0f} ms' if age is not None else '—'
+-        self.status.setText(f'{label} · {state.state} / {state.reason} · UNKNOWN · quality {state.quality:.2f} '
+-                            f'· 처리 {state.processing_fps:.1f} fps · 프레임 나이 {age_text}\n'
+-                            f'source {live.source_id if live else "—"} / session {live.session_id if live else "—"}')
+-        legacy = getattr(self.parent(), 'guide_vehicle', None)
+-        guide = getattr(legacy, 'session', None)
+-        sentinel = '—' if guide is None else ('동기화' if guide.synchronized else '동기화 대기')
+-        self.links.setText(f'영상 {"fresh" if age is not None and age < self.session.timeout else "stale / —"} · '
+-                           f'Pixhawk {"fresh" if self.pixhawk_fresh() else "stale / —"} · Sentinel Legacy {sentinel}')
+-        self.telemetry.setText(self.telemetry_text())
++        self._render_header(snap, t, v, veh)
++        self._render_tracking(snap, t, v, sel)
++        self._render_vehicle(veh)
++        self._render_modes(snap['modes'], veh)
++        self._render_events(snap['events'])
++        self._render_web(snap)
++        self.diag.setText(self._diagnostics(snap, t, v))
++
++    def _render_header(self, snap, t, v, veh):
++        sim = snap['app']['monitor'] == 'SIMULATION'
++        self._chip('monitor', snap['app']['monitor'], PURPLE if sim else YELLOW, True)
++        self._chip('app', '앱 연결됨', GREEN)
++        vcolor = {'LIVE': GREEN, 'SIMULATION': PURPLE, 'CONNECTING': YELLOW, 'STALE': RED}.get(v['state'], MUTED)
++        self._chip('video', f'영상 {v["state"]}', vcolor, tip=v['source'])
++        if veh is None:
++            for name, text in (('vehicle', '기체 미선택'), ('heartbeat', 'HB —'), ('mode', '모드 —'), ('armed', '시동 —')):
++                self._chip(name, text, MUTED)
++        else:
++            self._chip('vehicle', f'{veh["name"]} · SYS {veh["sysid"]} / COMP {veh["compid"]}'
++                       if not str(veh['name']).startswith('SYS') else f'{veh["name"]} · COMP {veh["compid"]}',
++                       GREEN if veh['connected'] else RED)
++            stale = veh['heartbeat_stale']
++            self._chip('heartbeat', f'HB {"STALE" if stale else "OK"} {veh["heartbeat_age_s"] if veh["heartbeat_age_s"] is not None else DASH}s',
++                       RED if stale else GREEN)
++            self._chip('mode', f'모드 {veh["mode"] or DASH}', BLUE)
++            armed = veh['armed']
++            self._chip('armed', DASH if armed is None else ('ARMED' if armed else 'DISARMED'),
++                       RED if armed else (GREEN if armed is False else MUTED), bool(armed))
++        self._chip('tracking', f'Tracking {t["state"]}', STATE_COLOR.get(t['state'], MUTED), True, t['reason'])
++        sentinel = snap['sentinel']['state']
++        self._chip('sentinel', f'Sentinel Legacy {sentinel}', GREEN if sentinel not in ('미사용', None) else MUTED)
++        level, text = snap['banner']['level'], snap['banner']['text']
++        color = LEVEL_COLOR.get(level, BLUE)
++        style = (f'QLabel{{font-size:20px;font-weight:900;padding:10px 14px;border-radius:10px;'
++                 f'border:3px solid {color};color:{"#fff" if level == "danger" else color};'
++                 f'background:{"#5a1424" if level == "danger" else "#171b24"};}}')
++        if self.banner.styleSheet() != style:
++            self.banner.setStyleSheet(style)
++        self.banner.setText(text)
++
++    def _render_tracking(self, snap, t, v, sel):
++        color = STATE_COLOR.get(t['state'], MUTED)
++        style = (f'QLabel{{background:{color};color:#111;font-size:30px;font-weight:900;'
++                 f'border-radius:10px;padding:6px 12px;}}')
++        if self.state_badge.styleSheet() != style:
++            self.state_badge.setStyleSheet(style)
++        self.state_badge.setText(t['state'])
++        self.reason.setText(t['reason_text'])
++        self.reason.setToolTip(f'내부 코드: {t["reason"]}')
++        self.state_badge.setToolTip(f'내부 코드: {t["reason"]}')
++        if sel:
++            follow = (f' · 따라잡기 가능 {sel["catchup_remaining_s"]:.0f}초' if sel['catchup_remaining_s'] > 0
++                      else ' · 그린 뒤 최신 프레임에서 다시 그리기 안내')
++            self.countdown.setText(f'ROI 선택 남은 시간 {sel["remaining_s"]:.0f}초{follow}')
++        else:
++            self.countdown.setText('')
++
++        def val(x, fmt='{}', unit=''):
++            return DASH if x is None else fmt.format(x) + unit
++        err = t['image_error']
++        self.track['quality'].setText(val(t['quality'], '{:.2f}'))
++        self.track['hold'].setText(val(t['hold_s'], '{:.1f}', ' s'))
++        self.track['pfps'].setText(val(t['processing_fps'], '{:.0f}'))
++        self.track['error'].setText(DASH if not err else f'{err[0]:+.3f}, {err[1]:+.3f}')
++        stale = v['state'] == 'STALE'
++        self.track['age'].setText(val(v['frame_age_ms'], '{}', ' ms') + ('  STALE' if stale else ''))
++        self.track['age'].setStyleSheet(f'QLabel{{color:{ORANGE if stale else "#f5f7fb"};}}')
++        self.track['dfps'].setText(val(v['decode_fps'], '{:.1f}'))
++        self.track['cls'].setText(t['object_class'])
++        out = snap['simulation']
++        self.track['sim'].setText('허용 · 메모리 기록만(비행 명령 아님)' if out['enabled'] else '해제')
++        live = v['state'] in ('LIVE', 'SIMULATION')
++        selecting = t['state'] == 'SELECTING'
++        self.buttons['ROI 선택'].setEnabled(live and not selecting)
++        self.buttons['선택 취소'].setEnabled(selecting)
++        self.buttons['모의 출력 허용'].setEnabled(t['state'] == 'TRACKING' and not out['enabled'])
++        self.buttons['모의 출력 해제'].setEnabled(out['enabled'])
++
++    @staticmethod
++    def _fmt_vehicle(veh):
++        """(key, text, stale) rows for the read-only vehicle table. Missing = —, old = STALE."""
++        if veh is None:
++            return [('name', '선택된 기체 없음 · 메인 창에서 기체를 선택하세요', False)]
++
++        def n(x, unit='', digits=1):
++            return DASH if x is None else f'{x:.{digits}f}{unit}'
++        a, alt, gs, g, b, pos = (veh[k] for k in ('attitude', 'altitude', 'groundspeed', 'gps', 'battery', 'position'))
++        armed = veh['armed']
++        return [
++            ('name', f'{veh["name"]} · {"연결" if veh["connected"] else "끊김"}', not veh['connected']),
++            ('link', f'{veh["link"] or DASH} (#{veh["link_id"] if veh["link_id"] is not None else DASH})', False),
++            ('ids', f'{veh["sysid"]} / {veh["compid"]}', False),
++            ('fw', f'{veh["firmware"]}' + (f' · {veh["sw_version"]}' if veh['sw_version'] else ''), False),
++            ('hb', f'{n(veh["heartbeat_age_s"], " s 전")}', veh['heartbeat_stale']),
++            ('mode', veh['mode'] or DASH, veh['heartbeat_stale']),
++            ('armed', DASH if armed is None else ('ARMED' if armed else 'DISARMED'), veh['heartbeat_stale']),
++            ('rc', '활성' if veh['rc_override'] else '없음', False),
++            ('att', DASH if not a else f'{n(a["roll"], "°")} / {n(a["pitch"], "°")} / {n(a["yaw"], "°")}',
++             bool(a and a['stale'])),
++            ('alt', DASH if not alt else f'{n(alt["relative_m"], " m")} / {n(alt["msl_m"], " m")}',
++             bool(alt and alt['stale'])),
++            ('gs', DASH if not gs else n(gs['mps'], ' m/s'), bool(gs and gs['stale'])),
++            ('gps', DASH if not g else f'{g["fix_text"]} · 위성 {g["sats"] if g["sats"] is not None else DASH}',
++             bool(g and g['stale'])),
++            ('bat', DASH if not b else f'{n(b["volt"], " V", 2)} · {DASH if b["pct"] is None else str(b["pct"]) + " %"}',
++             bool(b and b['stale'])),
++            ('pos', '위치 미수신' if not pos else f'{pos["lat"]:.6f}, {pos["lon"]:.6f}', bool(pos and pos['stale'])),
++        ]
++
++    def _render_vehicle(self, veh):
++        rows = self._fmt_vehicle(veh)
++        shown = {key for key, _, _ in rows}
++        for key, text, stale in rows:
++            label = self.veh[key]
++            label.setText(text + ('  STALE' if stale else ''))
++            label.setStyleSheet(f'QLabel{{color:{ORANGE if stale else "#f5f7fb"};}}')
++        for key, label in self.veh.items():
++            if key not in shown:
++                label.setText(DASH)
++                label.setStyleSheet('')
++        alt = veh and veh['altitude']
++        self.alt_note.setText(f'고도 기준 · {alt["reference"]}' if alt else '고도 미수신 · AGL로 표시하지 않습니다')
+ 
+     def telemetry_text(self):
+-        v = self.vehicle
+-        if v is None:
+-            return '기체 미선택 —'
+-        times = getattr(v, 'telemetry_received', {})
+-        samples = getattr(v, 'tracking_telemetry', {})
+-
+-        def group(kind):
+-            if kind not in times:
+-                return '—'
+-            stale = ' stale' if time.monotonic() - times[kind] > STALE_S else ''
+-            values = samples.get(kind, {})
+-            invalid = {'voltage_battery': (0, 65535), 'battery_remaining': (-1,), 'satellites_visible': (255,)}
+-            values = {k: ('—' if value is None or value in invalid.get(k, ()) else value) for k, value in values.items()}
+-            return str(values) + stale
+-        firmware = {3: 'ArduPilot', 12: 'PX4'}.get(v.autopilot, v.autopilot)
+-        hb = times.get('HEARTBEAT')
+-        age = f'{time.monotonic() - hb:.1f}s' if hb else '—'
+-        return (f'link {v.link.link_id} / sys {v.sysid} / comp {v.compid} · firmware {group("AUTOPILOT_VERSION")} '
+-                f'· autopilot {firmware} · mode {v.last_mode if hb else "—"} · armed {v.last_armed if hb else "—"} '
+-                f'· heartbeat {age} {"stale" if not self.pixhawk_fresh() else ""}\n'
+-                f'자세(rad) {group("ATTITUDE")} · GPS {group("GPS_RAW_INT")} · 배터리(mV/%) {group("SYS_STATUS")}\n'
+-                f'고도 GLOBAL_POSITION_INT(mm MSL / home-relative) {group("GLOBAL_POSITION_INT")} '
+-                f'· VFR_HUD(m MSL, AGL 아님) {group("VFR_HUD")}')
++        """Plain-text form of the vehicle table (logs/tests)."""
++        rows = self._fmt_vehicle(self.service.vehicle_state())
++        return '\n'.join(f'{key}: {text}' + (' STALE' if stale else '') for key, text, stale in rows)
++
++    def _render_modes(self, modes, veh):
++        ctl = modes['controller']
++        busy = ctl['state'] in ('CONFIRMING', 'REQUESTING')
++        self.current_mode.setText(f'현재 모드 {veh["mode"] or DASH}' if veh else '현재 모드 — (기체 미선택)')
++        key = (tuple((o['name'], o['enabled'], o['reason']) for o in modes['options']), veh and veh['mode'])
++        if key != self._mode_key:
++            self._mode_key = key
++            current = self.mode_combo.currentData()
++            self.mode_combo.clear()
++            model = self.mode_combo.model()
++            for o in modes['options']:
++                label = o['name'] if o['enabled'] else f'{o["name"]} (비활성)'
++                self.mode_combo.addItem(label, o['name'] if o['enabled'] else None)
++                item = model.item(self.mode_combo.count() - 1)
++                if not o['enabled']:
++                    item.setEnabled(False)
++                    item.setToolTip(o['reason'])
++            index = self.mode_combo.findData(current)
++            if index >= 0:
++                self.mode_combo.setCurrentIndex(index)
++        stale = veh is None or veh['heartbeat_stale']
++        self.mode_button.setEnabled(not busy and not stale and bool(modes['options']))
++        color = {'CONFIRMED': GREEN, 'REJECTED': RED, 'TIMEOUT': RED, 'FAILED': RED, 'CANCELLED': ORANGE,
++                 'REQUESTING': YELLOW, 'CONFIRMING': YELLOW}.get(ctl['state'], MUTED)
++        src = f' · 출처 {ctl["source"]}' if ctl.get('source') else ''
++        extra = ' · HEARTBEAT stale: 요청 불가' if veh is not None and stale else ''
++        self.mode_state.setText(f'{ctl["state"]} · {ctl["detail"]}{src}{extra}')
++        self.mode_state.setStyleSheet(f'QLabel{{color:{color};font-size:16px;font-weight:800;}}')
++
++    def _render_events(self, events):
++        key = (events[0]['t'], events[0]['text'], len(events)) if events else None
++        if key == self._event_key:
++            return
++        self._event_key = key
++        self.events.clear()
++        for e in events:
++            item = QListWidgetItem(f'{e["t"]}  [{e["kind"]}]  {e["text"]}')
++            item.setForeground(QColor({'warn': YELLOW, 'danger': RED}.get(e['level'], '#f5f7fb')))
++            self.events.addItem(item)
++
++    def _render_web(self, snap):
++        open_ = self.service.dashboard is not None
++        if open_:
++            self.web.setText(f'브라우저 대시보드 {self.service.dashboard.url} · 같은 추적 세션 공유 중 · '
++                             f'브라우저에서 비행 모드 변경 가능')
++            self.web.setStyleSheet(f'QLabel{{color:{ORANGE};font-size:17px;font-weight:900;'
++                                   f'border:2px solid {ORANGE};border-radius:8px;padding:6px 10px;}}')
++        else:
++            self.web.setText('브라우저 대시보드 꺼짐')
++            self.web.setStyleSheet(f'QLabel{{color:{MUTED};font-size:15px;}}')
++        self.web_open.setText('브라우저에서 열기' if open_ else '브라우저 대시보드 열기')
++        self.web_close.setEnabled(open_)
++
++    @staticmethod
++    def _diagnostics(snap, t, v):
++        return '\n'.join([
++            f'tracking session  {t["session_id"]}',
++            f'frame session     {t["frame_session_id"] or DASH} · seq {t["frame_seq"] if t["frame_seq"] is not None else DASH}',
++            f'video source_id   {v["source_id"] or DASH} · session {v["session_id"] or DASH}',
++            f'video             {v["source"]} · {v["transport"] or DASH} · {v["status"]} · '
++            f'{v["width"] or DASH}×{v["height"] or DASH} · 장착 {v["mount"]}',
++            f'내부 사유 코드     {t["reason"]}',
++            f'bbox              {t["bbox"] or DASH}',
++            f'timeout           {t["timeout_s"]} s · 모의 출력 {snap["simulation"]["output"] or DASH}',
++            f'브라우저 마지막 요청 {snap["app"]["web_result"]}',
++        ])
+ 
+     def save(self):
+         path, _ = QFileDialog.getSaveFileName(self, 'Tracking 로그 저장', 'tracking.json', 'JSON (*.json)')
+         if path:
+-            self.session.save(path)
++            self.service.save(path)
+ 
+     def shutdown(self):
+         if self.closed:
+@@ -281,10 +752,30 @@
+             pass
+         self.service.shutdown()
+ 
++    def ask_close_choice(self):
++        """'keep' (browser keeps the session), 'close_all' or 'cancel'. Patched in tests."""
++        box = QMessageBox(QMessageBox.Question, 'Tracking 창 닫기',
++                          '브라우저 대시보드가 열려 있어 같은 추적 세션과 영상이 계속 유지됩니다.\n'
++                          '브라우저에서는 비행 모드 변경도 계속 가능합니다.', parent=self)
++        keep = box.addButton('창만 닫기 (대시보드 유지)', QMessageBox.AcceptRole)
++        both = box.addButton('대시보드도 닫기', QMessageBox.DestructiveRole)
++        box.addButton('취소', QMessageBox.RejectRole)
++        box.setDefaultButton(both)
++        box.exec_()
++        return 'keep' if box.clickedButton() is keep else ('close_all' if box.clickedButton() is both else 'cancel')
++
+     def closeEvent(self, event):
+-        # While the browser dashboard is open it keeps using the same session: leave it running.
+-        if self.service.dashboard is None and not self.closed:
+-            self.service.disconnect_source('panel_closed')
+-            self.session.stop('panel_closed')
+-            self._image_key = None
++        if self.closed:
++            return event.accept()
++        if self.service.dashboard is not None:
++            choice = self.ask_close_choice()
++            if choice == 'cancel':
++                return event.ignore()
++            if choice == 'keep':
++                self.service.log_event('웹', 'Tracking 창 닫힘 · 브라우저 대시보드가 세션을 유지', 'warn')
++                return event.accept()
++            self.service.close_dashboard()
++        self.service.disconnect_source('panel_closed')
++        self.session.stop('panel_closed')
++        self._image_key = None
+         event.accept()
+--- stage3/tracking_service.py
++++ tracking_service.py
+@@ -36,12 +36,18 @@
+     "frame_or_worker_timeout": "영상 지연·단절 또는 처리 지연", "processing_timeout": "처리 지연",
+     "low_quality": "특징점 품질 저하", "incoherent_motion": "특징점 이동 불일치", "incoherent_affine": "형상 변화 불일치",
+     "scale_jump": "급격한 크기 변화", "out_of_frame": "영상 범위 이탈", "feature_attrition": "특징점 잔존 비율 저하",
+-    "insufficient_texture": "ROI 텍스처 부족", "invalid_roi_or_frame": "ROI/프레임 오류",
++    "insufficient_texture": "ROI 무늬 부족 · 무늬가 뚜렷한 곳(모서리·글자·경계)을 선택하세요", "invalid_roi_or_frame": "ROI/프레임 오류",
+     "invalid_frame_time": "프레임 시각 오류", "out_of_order_frame": "프레임 순서 역전",
+     "resolution_changed": "해상도 변경", "source_session_or_resolution_changed": "영상 소스·세션·해상도 변경",
+     "source_disconnected": "영상 해제", "vehicle_changed": "선택 기체 변경", "operator_intervention": "조종자 개입",
+     "app_shutdown": "앱 종료", "panel_closed": "Tracking 창 닫힘", "camera_mode_changed": "카메라 장착 방식 변경",
+-    "selection_frame_expired_reselect": "선택 프레임 만료 · 새 프레임에서 다시 선택하세요",
++    "selection_frame_expired_reselect": "선택 시간 초과 · 최신 프레임을 고정했습니다 · 다시 그리세요",
++    "selection_stale_redraw_latest": "고정 후 시간이 길어 따라잡기 불가 · 최신 프레임에서 다시 그리세요",
++    "catchup_failed_redraw_latest": "고정 이후 장면 변화로 따라잡기 실패 · 최신 프레임에서 다시 그리세요",
++    "invalid_roi": "ROI가 너무 작거나 영상 밖입니다 · 8×8 픽셀 이상 영상 안쪽을 그리세요",
++    "operator_revoke": "모의 출력 해제", "pixhawk_stale": "기체 HEARTBEAT stale",
++    "pixhawk_state_or_command_event": "기체 상태·명령 이벤트", "operator_rc_override": "RC override 활성",
++    "vehicle_mode_or_armed_changed": "기체 모드·시동 변경", "closed": "종료됨",
+     "roi_frame_mismatch_reselect": "다른 프레임의 ROI · 다시 선택하세요", "selection_not_active": "ROI 선택 상태 아님",
+     "selection_cancelled": "ROI 선택 취소", "timeout_changed": "timeout 변경", "invalid_clock": "시계 오류",
+     "flow_failed": "광류 계산 실패", "processing_error": "처리 오류", "source_changed": "영상 소스 변경",
+@@ -164,10 +170,19 @@
+ 
+     def change_timeout(self, value):
+         old = self.session
+-        self.session = TrackingSession(float(value))
++        self.session = TrackingSession(float(value), old.selection_window)
+         old.close()
+         self.last_key = None
+         self.log_event("추적", f"timeout {float(value):.2f}s 적용 · 이전 추적 세션 종료")
++
++    def set_selection_window(self, seconds):
++        self.session.set_selection_window(float(seconds))
++        self.log_event("추적", f"ROI 선택 시간 {float(seconds):.0f}초")
++
++    @staticmethod
++    def transport_applies(source):
++        """tcp/udp only selects the RTSP transport; device indexes and files ignore it."""
++        return str(source or "").strip().lower().startswith("rtsp")
+ 
+     # ------------------------------------------------------------------ tracking
+     def begin_selection(self):
+@@ -192,6 +207,10 @@
+         self.log_event("모의", "모의 출력 허용(메모리 기록만 · 비행 명령 아님)" if ok else "모의 출력 거부 · 추적 중 아님",
+                    "info" if ok else "warn")
+         return ok
++
++    def monitor_label(self):
++        """Single rule for every view: synthetic video or enabled simulated output = SIMULATION."""
++        return "SIMULATION" if (self.demo or self.session.sink.enabled) else "MONITOR ONLY"
+ 
+     def pixhawk_fresh(self):
+         stamp = getattr(self.vehicle, "telemetry_received", {}).get("HEARTBEAT")
+@@ -227,25 +246,25 @@
+         self.log_event("기체", f"선택 기체 {name} · 추적 세션·모드 요청 초기화" if vehicle else "선택 기체 없음")
+ 
+     # ------------------------------------------------------------------ flight modes
+-    def prepare_mode(self, mode):
++    def prepare_mode(self, mode, source="app"):
+         try:
+-            ticket = self.modes.prepare(self.vehicle, mode)
++            ticket = self.modes.prepare(self.vehicle, mode, source)
+         except ModeRequestError as exc:
+             self.log_event("모드", f"모드 요청 거부 · {exc}", "warn")
+             raise
+-        self.log_event("모드", f"{ticket['name']} {ticket['current_mode']} → {ticket['mode']} 확인 대기")
++        self.log_event("모드", f"{ticket['name']} {ticket['current_mode']} → {ticket['mode']} 확인 대기 ({source})")
+         return ticket
+ 
+-    def commit_mode(self, ticket_id):
++    def commit_mode(self, ticket_id, source="app"):
+         try:
+-            self.modes.commit(ticket_id)
++            self.modes.commit(ticket_id, source)
+         except ModeRequestError as exc:
+             self.log_event("모드", f"모드 요청 취소 · {exc}", "warn")
+             raise
+-        self.log_event("모드", "모드 변경 요청 1회 송신 · HEARTBEAT 확인 대기")
+-
+-    def cancel_mode(self, reason="사용자 취소"):
+-        self.modes.cancel(reason)
++        self.log_event("모드", f"모드 변경 요청 1회 송신 ({source}) · HEARTBEAT 확인 대기")
++
++    def cancel_mode(self, reason="사용자 취소", source="app"):
++        self.modes.cancel(reason, source)
+ 
+     # ------------------------------------------------------------------ browser commands
+     def execute(self, command):
+@@ -282,16 +301,18 @@
+             self.web_result = "합성 모의 영상"
+         elif action in ("mode_prepare", "mode_commit"):
+             if command["vehicle"] != key:
+-                self.modes.cancel("브라우저 요청 대상이 현재 선택 기체와 다릅니다.")
++                self.modes.cancel("브라우저 요청 대상이 현재 선택 기체와 다릅니다.", "web")
++                self.modes._audit("REJECTED_WEB_TARGET", f"요청 기체 {command['vehicle']} ≠ 선택 {key}", "web",
++                                  target={})
+                 raise ValueError("요청 대상이 현재 선택 기체와 다릅니다.")
+             if action == "mode_prepare":
+-                self.prepare_mode(command["mode"])
++                self.prepare_mode(command["mode"], "web")
+                 self.web_result = "모드 변경 확인 대기"
+             else:
+-                self.commit_mode(command["ticket"])
++                self.commit_mode(command["ticket"], "web")
+                 self.web_result = "모드 변경 요청 송신"
+         elif action == "mode_cancel":
+-            self.cancel_mode()
++            self.cancel_mode(source="web")
+             self.web_result = "모드 요청 취소"
+         else:  # the HTTP validator already restricts actions
+             raise ValueError("지원하지 않는 요청")
+@@ -388,12 +409,12 @@
+             state = "DISCONNECTED"
+         elif frame is None:
+             state = "CONNECTING"
+-        elif age is not None and age >= max(1.0, self.session.timeout):
+-            state = "STALE"
++        elif age is not None and age >= self.session.timeout:
++            state = "STALE"   # same limit the tracker uses: older frames cannot keep TRACKING
+         else:
+             state = "LIVE"
+         fps = None
+-        if len(self.receipts) >= 2 and self.receipts[-1] > self.receipts[0]:
++        if state in ("LIVE", "SIMULATION") and len(self.receipts) >= 2 and self.receipts[-1] > self.receipts[0]:
+             fps = (len(self.receipts) - 1) / (self.receipts[-1] - self.receipts[0])
+         return dict(state=state, source=self.source_label, transport=None if self.demo else self.transport,
+                     status=status_text, configured=bool(self.configured_source), mount=self.mount,
+@@ -478,10 +499,11 @@
+             return "danger", (f"추적 {result.state} · {reason_text(result.reason)} · ROI를 다시 선택해야 재개됩니다 "
+                               "· 기체 동작과 무관(정지·호버 아님)")
+         if result.state == "SELECTING":
+-            return "info", f"ROI 선택 중 · {reason_text(result.reason)}"
++            info = self.session.selection_info()
++            left = f" · 남은 시간 {info['remaining_s']:.0f}초" if info else ""
++            return "warn", f"ROI 선택 중 · {reason_text(result.reason)}{left}"
+         if result.state == "TRACKING":
+-            label = "SIMULATION 기록 중" if self.session.sink.enabled else "MONITOR ONLY"
+-            return "ok", f"추적 중 · {label} · 기체 제어 출력 없음"
++            return "ok", f"추적 중 · {self.monitor_label()} · 기체 제어 출력 없음"
+         if result.state == "STOPPED":
+             return "info", f"추적 정지 · {reason_text(result.reason)} · ROI 선택으로 다시 시작"
+         return "info", "영상 수신 중 · ROI 선택으로 추적을 시작하세요"
+@@ -498,8 +520,8 @@
+         vehicle = self.vehicle_state()
+         output = self.session.sink.output()
+         return dict(
+-            app=dict(connected=True, monitor="SIMULATION" if (self.demo or self.session.sink.enabled) else "MONITOR ONLY",
+-                     web_result=self.web_result),
++            app=dict(connected=True, monitor=self.monitor_label(), web_result=self.web_result,
++                     web_mode_change=self.dashboard is not None),
+             banner=dict(level=level, text=text), video=video,
+             tracking=dict(state=result.state, reason=result.reason, reason_text=reason_text(result.reason),
+                           session_id=result.session_id, frame_session_id=result.frame_session_id or None,
+@@ -510,6 +532,7 @@
+                           quality=_num(result.quality, 2) if result.state == "TRACKING" else None,
+                           hold_s=hold, processing_fps=_num(result.processing_fps, 1) if result.state == "TRACKING" else None,
+                           object_class=result.object_class, timeout_s=self.session.timeout,
++                          selection=self.session.selection_info(),
+                           pinned=None if pinned is None else dict(zip(
+                               ("source_id", "session_id", "frame_seq", "width", "height"), pinned))),
+             simulation=dict(enabled=self.session.sink.enabled,
+@@ -521,6 +544,17 @@
+             sentinel=dict(state="미사용" if legacy is None else legacy),
+             events=list(self.events)[:40])
+ 
++    def save(self, path):
++        """Tracking events, simulated output and the flight mode audit trail as one JSON file."""
++        import json
++        with self.session.lock:
++            data = dict(events=list(self.session.events), simulation=list(self.session.sink.rows))
++        with self.modes.lock:
++            data["mode_audit"] = list(self.modes.audit)
++        data["operator_log"] = list(self.events)
++        with open(path, "w", encoding="utf-8") as stream:
++            json.dump(data, stream, ensure_ascii=False, indent=2, allow_nan=False, default=str)
++
+     # ------------------------------------------------------------------ browser
+     def open_dashboard(self, bind=("127.0.0.1", 8766)):
+         from tracking_dashboard import TrackingDashboard
+@@ -529,8 +563,17 @@
+                 self.dashboard = TrackingDashboard(bind)
+             except OSError:
+                 self.dashboard = TrackingDashboard(("127.0.0.1", 0))   # port busy: ephemeral loopback port
+-            self.log_event("웹", f"Tracking 웹 대시보드 시작 · {self.dashboard.url}")
++            self.log_event("웹", f"Tracking 웹 대시보드 시작 · {self.dashboard.url} · 브라우저에서 비행 모드 변경 가능",
++                           "warn")
+         return self.dashboard.url
++
++    def close_dashboard(self):
++        if self.dashboard is not None:
++            self.dashboard.close()
++            self.dashboard = None
++            if (self.modes.snapshot().get("ticket") or {}).get("source") == "web":
++                self.modes.cancel("브라우저 대시보드 종료", "web")
++            self.log_event("웹", "Tracking 웹 대시보드 종료")
+ 
+     def _publish_web(self):
+         now = time.monotonic()
+@@ -573,7 +616,5 @@
+         self.disconnect_source("app_shutdown")
+         self.set_vehicle(None)
+         self.session.close()
+-        if self.dashboard is not None:
+-            self.dashboard.close()
+-            self.dashboard = None
++        self.close_dashboard()
+         self.closed = True
+--- stage3/tracking_session.py
++++ tracking_session.py
+@@ -20,8 +20,16 @@
+ from tracking_simulation import SimulationSink  # noqa: F401  (re-exported for callers/tests)
+ from tracking_worker import TrackingWorker
+ 
+-SELECTION_WINDOW_S = 3.0     # oldest pinned frame an ROI may be applied to
+-CATCHUP_MAX = 12             # retained frames since the pin (thinned when full)
++SELECTION_WINDOW_S = 8.0     # default time the operator may take to draw on the frozen frame
++SELECTION_WINDOW_RANGE = (2.0, 20.0)
++# Catch-up policy: the tracker is initialised on the frozen frame and advanced through the
++# retained frames only if the ROI arrives within CATCHUP_SPAN_S of that frame. The retained
++# set is bounded (CATCHUP_MAX, thinned when full), so the step between retained frames grows
++# with the elapsed time and optical flow becomes unreliable. Beyond the span (but inside the
++# window), or when catch-up loses the features, the ROI is NOT applied and NOT moved to another
++# object: the newest frame is frozen instead and the operator is asked to draw again there.
++CATCHUP_SPAN_S = 4.0
++CATCHUP_MAX = 12
+ 
+ 
+ def frame_ref(frame):
+@@ -32,9 +40,10 @@
+     def __init__(self, timeout=.3, selection_window=SELECTION_WINDOW_S):
+         if type(timeout) not in (int, float) or not math.isfinite(timeout) or not .05 <= timeout <= 10:
+             raise ValueError('timeout must be 0.05..10 seconds')
++        low, high = SELECTION_WINDOW_RANGE
+         if type(selection_window) not in (int, float) or not math.isfinite(selection_window) \
+-                or not timeout <= selection_window <= 10:
+-            raise ValueError('selection window must be timeout..10 seconds')
++                or not low <= selection_window <= high:
++            raise ValueError(f'selection window must be {low:g}..{high:g} seconds')
+         self.timeout, self.selection_window = timeout, selection_window
+         self.lock = threading.RLock()
+         self.result = TrackingResult(session_id=uuid.uuid4().hex)
+@@ -106,8 +115,11 @@
+             if ref is not None and tuple(ref) != frame_ref(pinned):
+                 return self._reselect('roi_frame_mismatch_reselect')
+             now = time.monotonic()
+-            if now - pinned.decoder_received_monotonic >= self.selection_window:
++            elapsed = now - pinned.decoder_received_monotonic
++            if elapsed >= self.selection_window:
+                 return self._reselect('selection_frame_expired_reselect')
++            if elapsed > CATCHUP_SPAN_S and self.frame is not pinned:
++                return self._reselect('selection_stale_redraw_latest')
+             try:
+                 x, y, w, h = (float(v) for v in roi)
+             except (TypeError, ValueError):
+@@ -121,13 +133,31 @@
+             self.deadline = now + self.timeout + .05 * (1 + len(catchup))
+             last = catchup[-1] if catchup else pinned
+             self.submitted = last.session_id, last.frame_seq
+-            self.worker.submit(self.result.session_id, pinned, (x, y, w, h), catchup, self.selection_window)
++            self.worker.submit(self.result.session_id, pinned, (x, y, w, h), catchup,
++                               min(self.selection_window, CATCHUP_SPAN_S + self.timeout))
+             return True, 'roi_pending'
+ 
+     def _reselect(self, reason):
+         self._invalidate('SELECTING', reason)
+         self.pinned, self.catchup = self.frame, []
+         return False, reason
++
++    def set_selection_window(self, seconds):
++        low, high = SELECTION_WINDOW_RANGE
++        if type(seconds) not in (int, float) or not math.isfinite(seconds) or not low <= seconds <= high:
++            raise ValueError(f'selection window must be {low:g}..{high:g} seconds')
++        with self.lock:
++            self.selection_window = float(seconds)
++
++    def selection_info(self):
++        """Countdown data for both views while a frame is frozen for drawing."""
++        with self.lock:
++            if self.result.state != 'SELECTING' or self.pinned is None:
++                return None
++            elapsed = time.monotonic() - self.pinned.decoder_received_monotonic
++            return dict(elapsed_s=round(elapsed, 1), window_s=self.selection_window, catchup_s=CATCHUP_SPAN_S,
++                        remaining_s=round(max(0., self.selection_window - elapsed), 1),
++                        catchup_remaining_s=round(max(0., CATCHUP_SPAN_S - elapsed), 1))
+ 
+     def select(self, roi):
+         """Backwards compatible: apply to the pinned frame (or latest if nothing is pinned)."""
+@@ -158,10 +188,13 @@
+                     self.submitted = key
+                     self.worker.submit(self.result.session_id, frame)
+ 
+-    def _deliver(self, generation, frame, obs, started, finished, error):
++    def _deliver(self, generation, frame, obs, started, finished, error, catchup_failed=False):
+         with self.lock:
+             if self.closed.is_set() or generation != self.result.session_id:
+                 return   # late result of a cancelled/replaced session
++            if catchup_failed and not error:
++                self._reselect('catchup_failed_redraw_latest')
++                return
+             if error:
+                 self._invalidate('ERROR', 'worker_exception:' + error)
+                 return
+--- stage3/tracking_worker.py
++++ tracking_worker.py
+@@ -35,6 +35,7 @@
+                 self.pending = None
+             started = time.monotonic()
+             last = frame
++            catchup_failed = False
+             try:
+                 if generation != self.generation:
+                     self.core = RoiTracker(self.timeout)
+@@ -50,13 +51,14 @@
+                         obs = self.core.update(later.pixels, later.frame_seq, later.decoder_received_monotonic,
+                                                time.monotonic(), select_age)
+                         last = later
++                        catchup_failed = obs.state != 'TRACKING'
+                 else:
+                     obs = self.core.update(frame.pixels, frame.frame_seq,
+                                            frame.decoder_received_monotonic, started)
+                 error = None
+             except Exception as exc:
+                 obs, error = None, type(exc).__name__
+-            self.deliver(generation, last, obs, started, time.monotonic(), error)
++            self.deliver(generation, last, obs, started, time.monotonic(), error, catchup_failed)
+ 
+     def close(self):
+         with self.condition:

@@ -1,0 +1,87 @@
+{
+  "name": "기준값 미설정",
+  "firmware": "px4",
+  "items": [
+    {
+      "id": "GF_ACTION",
+      "group": "지오펜스",
+      "parameter": "GF_ACTION",
+      "description": "지오펜스 이탈 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "GF_MAX_HOR_DIST",
+      "group": "지오펜스",
+      "parameter": "GF_MAX_HOR_DIST",
+      "description": "최대 수평 거리",
+      "unit": "m",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "GF_MAX_VER_DIST",
+      "group": "지오펜스",
+      "parameter": "GF_MAX_VER_DIST",
+      "description": "최대 고도",
+      "unit": "m",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "RTL_RETURN_ALT",
+      "group": "RTL",
+      "parameter": "RTL_RETURN_ALT",
+      "description": "귀환 고도",
+      "unit": "m",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "NAV_RCL_ACT",
+      "group": "페일세이프",
+      "parameter": "NAV_RCL_ACT",
+      "description": "조종기 신호 상실 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "NAV_DLL_ACT",
+      "group": "페일세이프",
+      "parameter": "NAV_DLL_ACT",
+      "description": "GCS 신호 상실 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "COM_LOW_BAT_ACT",
+      "group": "배터리",
+      "parameter": "COM_LOW_BAT_ACT",
+      "description": "배터리 부족 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BAT_LOW_THR",
+      "group": "배터리",
+      "parameter": "BAT_LOW_THR",
+      "description": "배터리 부족 잔량",
+      "unit": "비율",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BAT_CRIT_THR",
+      "group": "배터리",
+      "parameter": "BAT_CRIT_THR",
+      "description": "배터리 위험 잔량",
+      "unit": "비율",
+      "severity": "warn",
+      "criteria": null
+    }
+  ]
+}

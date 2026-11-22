@@ -1,0 +1,7 @@
+............
+----------------------------------------------------------------------
+Ran 12 tests in 16.710s
+
+OK
+Avoidance: initial 5 ms; 5 Hz limited updates max 15 ms
+20% loss: 8/8 critical alerts ACKed; detect to decision 7–12 ms

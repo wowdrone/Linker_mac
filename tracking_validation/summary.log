@@ -1,0 +1,107 @@
+test_ai_tuner: 11 tests, exit 0
+...........
+----------------------------------------------------------------------
+Ran 11 tests in 0.131s
+
+OK
+
+test_drive_dashboard: 6 tests, exit 1
+server_address)
+PermissionError: [Errno 1] Operation not permitted
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.535s
+
+FAILED (errors=5)
+
+test_flight_actions: 3 tests, exit 0
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK
+
+test_guide_stage1: 12 tests, exit 0
+ ms
+20% loss: 8/8 critical alerts ACKed; detect to decision 6–10 ms
+............
+----------------------------------------------------------------------
+Ran 12 tests in 16.702s
+
+OK
+
+test_health_data: 6 tests, exit 1
+127.0.0.1', 0))
+PermissionError: [Errno 1] Operation not permitted
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.062s
+
+FAILED (errors=1)
+
+test_safety_parameters: 5 tests, exit 0
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.101s
+
+OK
+
+test_safety_validation: 5 tests, exit 0
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.000s
+
+OK
+
+test_sentinel_compat: 6 tests, exit 0
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.005s
+
+OK
+
+test_shared_video: 8 tests, exit 0
+........
+----------------------------------------------------------------------
+Ran 8 tests in 1.878s
+
+OK
+
+test_tracking_core: 14 tests, exit 0
+..............
+----------------------------------------------------------------------
+Ran 14 tests in 0.040s
+
+OK
+
+test_tracking_main_window: 1 tests, exit 0
+ot support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.324s
+
+OK
+
+test_tracking_replay: 1 tests, exit 0
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.999s
+
+OK
+
+test_tracking_session: 10 tests, exit 0
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.592s
+
+OK
+
+test_tracking_ui: 5 tests, exit 0
+pport propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 1.080s
+
+OK

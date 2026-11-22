@@ -1,0 +1,70 @@
+{
+ "changed": {
+  "Codex_CLI_Tracking_\ubcf4\uc644\ud504\ub86c\ud504\ud2b8.txt": [
+   "2bc6a7e2ae74297d29596c78ca2cb3ceb18e6ef65413bfe1b0155fa34328626c",
+   "2f17e6c2f2633a3e1d73bc32cf6cf69dec7136a3ef38a6c88cc291002eb8ea2a"
+  ],
+  "Linker_mac.spec": [
+   "919c302601cc15367998dfd58f6e13d032b743bb0ced3611744270a400fd45dd",
+   "e71e89904c5c826be239c124439494cfe2c4287e841e1d01af78285a4f355185"
+  ],
+  "docs/tracking_monitor.md": [
+   "aabdfd1b3d38bba02289f2b61a7955f6a7494132c9352a5eb1221726429f5df8",
+   "c7c29ee32ed3bfea4c0d23727cd25543a945f77489e1b4e4122834cb8cf9c62d"
+  ],
+  "flight_mode_controller.py": [
+   "fe78183bc9b5bbd02d50413e328cd031f186085f797ba3f0167a67eada76f3d9",
+   "60ad54d3de66f65d2d146d91970802b2e68403caee881d8a3a2132e831e1f5ed"
+  ],
+  "tests/test_tracking_replay.py": [
+   "27071362b31bfc690e41422fd3f90508b74eca075ee2a941b36297446b2bc727",
+   "1cdb76e9576823c594bd7095aeb3926e566beb71ccf593039533a88f9cac1b65"
+  ],
+  "tests/test_tracking_session.py": [
+   "575e35e5afe06ea129f655f0728f35c66b7c8ddb96b3da3a17fcb6cadad8dce9",
+   "6edb06dc16cdcf425fbcb8a6fa1e3db13b04adf77006abd12cb59e2ceffff502"
+  ],
+  "tests/test_tracking_ui.py": [
+   "c129d884d4c818e417718b31cfed4ea9479ae1868c0f3a1ccf931302380643d2",
+   "3b1998c8e05e2fe575cd00d9c0461b4a938db88cd38e77599f8f2a55dd7ecf17"
+  ],
+  "tracking_core.py": [
+   "5397ea8750c71f808dccf55ed7a8e5517e0c4aa5579028b2cb29a339ed3b2429",
+   "86bad392f7a44ce15532bc40855e8dc882a19459b3b5038e48062788c2ba9bc8"
+  ],
+  "tracking_dashboard.html": [
+   "bdc3b152b917d5a7de38d12a92c3b65ce71ca0a32d5e765ceb0cfb17f584973f",
+   "ffb2e2738eb02564b2fd27e01909b066e38e9a7fbb630a384fcb8486a8db4b7e"
+  ],
+  "tracking_dashboard.py": [
+   "7c38a65acec9b9ceb7e79ac9601fe0c36048a24794c24d3ab57ece18a6590582",
+   "bb32eb9853ce860769cffb293ca330e266c58948ffdeeb970cac0eac75691d70"
+  ],
+  "tracking_panel.py": [
+   "54938e98814b9cd5c1a638bc513e18ca35bc35c45726ef742beb7ff47eeb30da",
+   "c23f8f26866816639d23920bcd06e9318c32408ed4454d6debeeac196fbc5cf8"
+  ],
+  "tracking_service.py": [
+   "df62b36acb6711138d85f641813c579cce645fb5d7ae5fe4f75ebfddbe00781d",
+   "d19e9a6a611a83017cb671fb30d2e14f513d1f32a1be52ba410ae79ccc715a89"
+  ],
+  "tracking_session.py": [
+   "d3b97b67e76a0faf35899cbed84cdc184d5aae39542c1d522572e4eaa2ea9592",
+   "56c69267e722ecc622a914f1220010f4c25b01bd7ab4d62d6c256ccdf616fe91"
+  ],
+  "tracking_worker.py": [
+   "38da35b70ee6428c5bcca1481a2ac2b659e7cd207b3a9b5ffe6ff5b52144eb67",
+   "4eaaba22bf9dfc989790c95b74e4d7a96e76f48f8254b8fe41d07ee925a23ac8"
+  ]
+ },
+ "added": {
+  "tests/test_build_spec.py": "6507a5a8f68af968d40997290622e88469f9273a8eca2686462da96fa7234e1c",
+  "tests/test_flight_mode_controller.py": "7098f0548fb34ac6b1d75f626b6634182b4ad85bceafc5e20ac98a9a6b7c48c0",
+  "tests/test_tracking_dashboard.py": "cc0b359217a93f417a6b9927d2b3edfddd9b90212169f7e00b80157430e4f263",
+  "tests/test_tracking_html.py": "e90b5ea2423622aa7f42a6e6277c56fe94bd62d9b3c21839f9262c13ef9d3cdd",
+  "tests/test_tracking_service.py": "72c997e1aaef9f10099172d532f1d5bfaaab72cb18a479b4dfbc89502a924d1d",
+  "tools/capture_tracking_views.py": "c51d17ab1eb6434586a77fde7e24c52d7b81f19ca81b4f5b56f900b370cfb64e",
+  "tools/measure_tracking_ui.py": "67eadaa72f0294fb7301125577ade00470608f9cf52e88ef726b08bf1266371a",
+  "tools/tracking_replay_metrics.py": "5d359367fcb937d891c2d05b38a9cd3793fa6aa0f1d97874451e0c2a7251d805"
+ }
+}

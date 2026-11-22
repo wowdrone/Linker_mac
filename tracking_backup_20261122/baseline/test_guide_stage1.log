@@ -1,0 +1,22 @@
+E
+======================================================================
+ERROR: test_guide_stage1 (unittest.loader._FailedTest.test_guide_stage1)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_guide_stage1
+Traceback (most recent call last):
+  File "/opt/local/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/loader.py", line 394, in _find_test_path
+    module = self._get_module_from_name(name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/local/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/loader.py", line 337, in _get_module_from_name
+    __import__(name)
+  File "/Users/kimmunju/workspace/Linker_mac/tests/test_guide_stage1.py", line 21, in <module>
+    from guide_sentinel import SentinelSession
+  File "/Users/kimmunju/workspace/sentinel/guide_sentinel.py", line 20, in <module>
+    from guide_protocol import (
+ImportError: cannot import name 'CAMERA_FRESH' from 'guide_protocol' (/Users/kimmunju/workspace/Linker_mac/guide_protocol.py)
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)

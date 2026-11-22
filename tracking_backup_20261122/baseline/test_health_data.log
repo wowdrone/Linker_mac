@@ -1,0 +1,16 @@
+..E/Users/kimmunju/workspace/Linker_mac/tab_health.py:110: ResourceWarning: unclosed <socket.socket fd=6, family=2, type=2, proto=0, laddr=('0.0.0.0', 0)>
+  action.toggled.connect(lambda checked, field=field: self.choose_field(field, checked))
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+...
+======================================================================
+ERROR: test_real_mavlink_udp_to_active_vehicle_and_charts (test_health_data.HealthTests.test_real_mavlink_udp_to_active_vehicle_and_charts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/kimmunju/workspace/Linker_mac/tests/test_health_data.py", line 117, in test_real_mavlink_udp_to_active_vehicle_and_charts
+    fc.bind(('127.0.0.1', 0))
+PermissionError: [Errno 1] Operation not permitted
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.095s
+
+FAILED (errors=1)

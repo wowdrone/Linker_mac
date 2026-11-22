@@ -1,0 +1,64 @@
+Mac의 /Users/kimmunju/workspace/Linker_mac 실제 소스를 수정해 Linker GCS에 고정 장착 카메라 기반 비학습형 객체 Tracking을 추가하라. 한국어로 보고하고, 분석만 하고 끝내지 말고 아래 0~5단계를 구현·검증하라. 실기 비행제어와 Sentinel 외부 소스 변경은 이번 범위에 포함하지 않는다.
+
+목표와 해석
+- 현재 Guide는 Sentinel 장애물 경보 기반 차량 주행 지원이다. 단순 전역 이름 변경으로 Tracking으로 바꾸지 말라.
+- UI의 주 진입점을 Tracking으로 전환하되 기존 GuideVehiclePanel, VehicleSession, CLI --guide-vehicle 및 기존 대시보드 접근은 Sentinel Legacy로 유지하라.
+- 기본 카메라는 기체에 고정 장착한 비짐벌 카메라다. 지상 고정 카메라 모드와 구분하라. 기본 목표는 영상 내 관찰 추적이며 자동 추격·접근·충돌 유도는 구현하지 않는다.
+- 비학습형은 사전 학습 모델뿐 아니라 온라인 분류기 학습도 사용하지 않는 것으로 해석한다. goodFeaturesToTrack + pyramidal LK 광류 + 전후방 오차/잔존점/이동 일관성 검사를 기본으로 한다. YOLO, PyTorch, 모델 다운로드, MIL은 추가하지 말라. CSRT/KCF는 온라인 적응 정책을 별도 합의하기 전까지 기본값으로 사용하지 말라.
+
+0. 변경 전 조사와 보호
+1) AGENTS.md 등 적용 지침을 읽고, cwd와 실제 파일 경로, 변경 상태를 확인하라. 이 폴더에는 조사 당시 .git이 없었고 시스템 git은 Xcode 오류로 실패했다. 기존 변경을 지우거나 자동 초기화하지 말고 파일 백업·SHA256·diff로 보호하라.
+2) main_window.py, guide_vehicle_panel.py, guide_vehicle.py, guide_protocol.py, protocol/wow_guide.xml, wow_guide_mavlink.py, drive_mode_manager.py, drive_dashboard.py, dashboard_bridge.py, video_grid.py, gstreamer_capture.py, fleet.py, Linker.py, health_telemetry.py, flight_actions.py, Linker_mac.spec와 tests를 읽어 실제 연결 지점을 확인하라.
+3) 인접 /Users/kimmunju/workspace/sentinel/guide_protocol.py, guide_sentinel.py, protocol/wow_guide.xml은 호환성 확인용으로 읽되 수정하지 말라. 서명 키·자격증명 내용은 출력하지 말라.
+4) 기존 .venv를 사용하라. 조사 당시 Python 3.12 arm64 / OpenCV 5.1.0, CSRT API 없음이었다. 실제 환경을 다시 확인하고 실행 중 패키지를 자동 교체하지 말라.
+5) 모듈별 별도 프로세스로 기존 테스트를 실행하라. 전체 discover는 QCoreApplication/QApplication 충돌이 있었다. 기존 실패를 숨기지 말라.
+
+1. Sentinel 호환성부터 확립
+- 실제 발견: Linker는 health bit 0/1만 허용하며 현재 Sentinel은 CAMERA_FRESH, POSE_FRESH, GPS_3D, CLOCK_OK, COURSE_LOADED(bit 2~6)를 추가했다. tests/test_guide_stage1.py는 SentinelSession import 중 Linker의 동명 guide_protocol을 참조하여 CAMERA_FRESH ImportError가 발생한다. test_drive_dashboard.py도 의존 실패한다.
+- 두 프로세스 간 wire 호환과 한 프로세스 내 Python import 호환을 분리해서 해결하라. 격리된 프로세스 fixture 또는 명시적 namespace를 사용해 sys.path 순서에 의존하지 않게 하라. 과거/현재 프로필 fixture를 각각 두어 Sentinel의 추가 필수 설정·extends·STAGE 차이를 검증하라. 상수만 복사한 뒤 완료 처리하지 말라.
+- 기존 메시지 ID 52200~52206, 필드, 서명, 순번·세션·UTC·TTL·ACK·스냅샷 동기화 의미는 유지하라. 합의된 추가 health 비트만 수용하고 나머지 unknown bit는 거부하라. 구형 bit0/1 peer도 지원하라.
+- 생성된 wow_guide_mavlink.py를 직접 수정하지 말라. XML 변경이 불필요하면 유지하라. Guide HEARTBEAT/ACK와 Pixhawk HEARTBEAT/COMMAND_ACK를 구분하라.
+- bbox를 가짜 위경도/거리와 함께 OBSTACLE_ALERT나 DRIVE_ADVICE로 내보내지 말라. 새 추적 이벤트는 이번에는 내부 전용이다.
+
+2. 영상과 데이터 모델
+- 이미 존재하는 _SharedCapture를 재사용하라. Fly+Video4CH+Tracking에서 동일 소스 디코더는 하나여야 한다. 녹화·스냅샷·최초 구독자 transport 동작을 보존하라.
+- FrameEnvelope에 source_id, session_id, frame_seq, width/height, decoder_received_monotonic을 포함하라. 원본 촬영 시각이 없으면 이를 수신 시각과 혼동하지 말라. QImage 표시 시각으로 프레임 신선도를 판단하지 말라.
+- 최신 프레임 1개만 유지하는 구독 API를 설계하라. numpy 버퍼 소유권·복사·읽기 전용 정책을 명확히 하고 느린 구독자가 UI나 기존 녹화를 막지 않게 하라. Qt queued signal이 무한 누적되지 않게 하라.
+- RTSP URL은 기존 정상 설정을 재사용하고 설정 가능하게 하라. 프리셋 주소를 실제 HM30 주소로 단정하지 말라. 비밀번호 포함 URL은 로그에서 가려라.
+- 재접속·소스 변경·해상도 변경 시 session_id를 바꾸고 이전 추적 결과를 폐기하라. 앱 종료 시 취소·참조 해제·워커 종료를 보장하라. native read가 오래 걸려도 UI를 막거나 실행 중 QThread를 파괴하지 말라.
+
+3. 추적 코어와 상태
+- tracking_core.py 및 tests/test_tracking_core.py가 있으면 기존 참조 구현을 읽고 확장하라. 독립 광류 참조 구현은 IDLE/TRACKING/LOST, 평행이동만 처리하므로 완성된 실영상 추적기로 간주하지 말라.
+- tracking_models.py, tracking_worker.py, tracking_session.py에 데이터·스레드·세션 책임을 분리하라. 순수 코어에서 fleet, Linker, socket, pymavlink를 import하지 말라.
+- 상태: IDLE, SELECTING, TRACKING, LOST, STOPPED, ERROR. 결과에는 bbox, center, normalized_image_error, bounded trail, 품질 지표, frame seq, 수신/처리 시각, 상실 이유를 포함하라. quality는 잔존 특징점/일관성이지 클래스 확률이 아니다. 클래스는 UNKNOWN이다.
+- 수동 ROI를 기본으로 하고 이미지 밖·너무 작은 ROI·무텍스처·NaN/Inf·잘못된 dtype/shape·역행/중복 frame seq·미래/오래된 시각을 검증하라.
+- 광류 실패·가림·품질 저하·프레임 timeout·해상도 변경·재연결·작업 예외 시 LOST/ERROR로 전환하고 유효 bbox와 이전 출력을 무효화하라. LOST는 새 프레임만으로 해제하지 말고 사용자가 새 ROI를 선택해야 한다.
+- 프레임 콜백과 독립된 watchdog을 두어 입력 프레임이 전혀 오지 않거나 워커가 지연될 때도 중단되게 하라. 처리중 결과가 늦게 도착해도 취소된 session_id이면 버려라.
+- 300ms timeout은 초기 시험값일 뿐이다. 설정 검증을 넣고 실제 지연에 따라 조정 가능하게 하라.
+- 자동 후보 검출은 이 단계 필수 아님. 추가한다면 지상 고정 모드의 차분/윤곽선과 기체 고정 모드의 배경 이동 보정을 구분하고 후보 확정은 사용자에게 맡겨라. 다른 객체로 자동 전환하지 말라.
+
+4. PyQt 추적 화면과 Pixhawk 표시
+- main_window.py의 기존 스타일에 맞춰 TrackingPanel을 추가하라. Guide 레거시 버튼/메뉴와 종료 처리는 유지하라. 시작 시 영상/기체 자동 연결이나 Guide 자동 송신을 추가하지 말라.
+- 화면: 영상, ROI 사각형, 현재 bbox, 중심선, 궤적, TRACKING/LOST 이유, 처리 FPS, 프레임 나이, source/session, MONITOR ONLY 또는 SIMULATION 표시.
+- ROI는 VideoCanvas.paintEvent의 KeepAspectRatio, letterbox, 중앙 zoom crop을 반영해 원본 좌표로 변환하라. 여백 클릭을 거부하고 resize·줌·고해상도 화면에서 검증하라.
+- 조작: 소스 선택, ROI 선택, 추적 정지, 모의 시험, 로그 저장. 영상·Pixhawk·Sentinel 링크 상태는 각각 표시한다.
+- Fleet의 기존 Vehicle을 읽기 전용으로 구독하라. 별도 mavlink_connection/recv_match 루프를 만들지 말라. 선택 기체의 link_id/sysid/compid, firmware, 모드, armed, heartbeat age, 자세, GPS fix, 고도 기준, 배터리를 표시하라. 미수신 값은 —, 오래된 값은 stale로 표시하라.
+- telemetry 종류별 monotonic 수신 시각을 관리하라. 현재 VFR_HUD 기반 초기 상대 고도를 AGL로 표시하지 말라. 기체 선택 변경 시 추적 세션/모의 출력의 권한을 즉시 해제하라.
+- DashboardBridge의 기존 토큰/Host 검증/Qt 요청 큐를 유지하라. 브라우저에 새 비행제어 엔드포인트를 추가하지 말라.
+
+5. 모의 출력과 시험
+- 기본값 MONITOR ONLY. 시뮬레이션은 메모리/파일 sink로 구현하고 실제 Vehicle/master/mav 객체를 받을 수 없게 하라. 실제 송신 기능을 단순 플래그 하나로 열 수 있는 구조는 금지한다.
+- 이번 범위에서 send_virtual_rc, arm/disarm, takeoff, set_mode, RC_CHANNELS_OVERRIDE, SET_ATTITUDE_TARGET, SET_POSITION_TARGET_* 호출을 Tracking과 연결하지 말라. 비행 파라미터/failsafe를 바꾸지 말라.
+- 현재 Linker._on_rc_override_timer는 이전 값을 반복 송신한다. 향후 제어에서 워커 정지만으로 안전해진다고 가정하지 말라. 현재 구현은 송신 자체가 없어야 한다.
+- 모의 출력에는 session, expiry와 stop reason을 두고 상실/timeout/기체변경/조종자개입/종료 후 이전 출력을 재사용하지 말라. Pixhawk stale은 영상 관찰과 분리하되 모의 제어 허가는 취소하라.
+- 테스트: 합성 평행이동의 bbox 오차, 가림·저텍스처·품질저하·시간 역행·프레임단절·해상도변경·재연결·소스교체·늦은 결과·사용자정지·앱종료, ROI 좌표 변환, 공유디코더 한 개, 워커 종료, 잘못된 서명/중복/순서/TTL/스냅샷 재동기화, 구형 및 현재 Sentinel health 비트.
+- 기존 송신 메서드에 spy를 걸어 Tracking 관찰/모의 모드에서 실기 제어 호출이 0임을 검증하라. 실제 HM30/시리얼 기체에 자동 연결하지 말라.
+- 기존 test_shared_video, test_flight_actions, test_health_data, test_safety_parameters, test_safety_validation, test_ai_tuner와 호환 시험을 모듈별 프로세스로 실행하라. 스킵과 기존 실패는 이유를 남기고 전체 통과로 포장하지 말라.
+- arm64 Python/Qt/OpenCV/GStreamer 아키텍처를 확인하고 필요한 새 모듈·리소스를 Linker_mac.spec에 반영하라. 패키지 변경은 별도 환경에서 검증 후 최소화하라. 앱 패키지 빌드를 못 하면 이유를 명시하라.
+
+완료 보고
+- 실제 변경 파일, 전후 동작, 이벤트/스레드/프로토콜 흐름, 테스트 명령과 결과를 제시하라.
+- 새 Tracking 화면의 오프스크린/실제 UI 검증 결과와 남은 HM30 실영상 시험을 구분하라.
+- 녹화영상/합성영상 검증과 실제 SITL 비행동역학 검증을 구분하라. sim_multi_vehicle.py를 실제 autopilot SITL과 동일시하지 말라.
+- 실기 제어는 미구현임을 명확히 하고 이후 ArduPilot/PX4별 handover/failsafe/SITL 승인 기준을 문서화하라. 비행 준비 완료라고 선언하지 말라.
+- 관련 없는 파일/사용자 변경을 건드리지 말고, 실제 수행한 범위만 완료로 보고하라.

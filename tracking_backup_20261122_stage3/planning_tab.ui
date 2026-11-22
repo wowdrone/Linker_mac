@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PlanningTab</class>
+ <widget class="QWidget" name="page_planning">
+  <property name="windowTitle">
+   <string>Planning</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_root">
+   <item>
+    <widget class="QSplitter" name="plan_splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+
+     <!-- 왼쪽 영역 -->
+     <widget class="QWidget" name="plan_left">
+      <layout class="QVBoxLayout" name="plan_left_layout">
+       <item>
+        <widget class="QTableWidget" name="wp_table">
+         <column>
+          <property name="text">
+           <string>#</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lat</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lon</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Alt (m)</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Speed (m/s)</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Heading (deg)</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+
+       <item>
+        <widget class="QGroupBox" name="plan_group">
+         <property name="title">
+          <string>Flight Plan &amp; RTH Options</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_plan">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_wp_alt">
+            <property name="text">
+             <string>Default WP Alt (m)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="spn_wp_alt"/>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="lbl_wp_speed">
+            <property name="text">
+             <string>Cruise Speed (m/s)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QDoubleSpinBox" name="spn_wp_speed"/>
+          </item>
+
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_rtl_alt">
+            <property name="text">
+             <string>RTH Alt (m)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="spn_rtl_alt"/>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="lbl_rtl_action">
+            <property name="text">
+             <string>RTH Action</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QComboBox" name="cmb_rtl_action"/>
+          </item>
+
+          <item row="2" column="0">
+           <widget class="QLabel" name="lbl_rtl_loiter">
+            <property name="text">
+             <string>Loiter Time (s)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QDoubleSpinBox" name="spn_loiter_time"/>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="btn_apply_plan">
+            <property name="text">
+             <string>Apply Plan</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <item>
+        <layout class="QHBoxLayout" name="btn_row">
+         <item>
+          <widget class="QPushButton" name="btn_add_wp">
+           <property name="text">
+            <string>Add WP</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_del_wp">
+           <property name="text">
+            <string>Delete WP</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_clear_wp">
+           <property name="text">
+            <string>Clear All</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- 오른쪽 영역: 지도 넣을 컨테이너 -->
+     <widget class="QWidget" name="plan_right">
+      <layout class="QVBoxLayout" name="plan_right_layout">
+       <item>
+        <widget class="QWidget" name="map_container">
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>200</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
+

@@ -1,0 +1,111 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mavlink>
+  <version>3</version>
+  <dialect>211</dialect>
+  <messages>
+    <message name="GUIDE_HEARTBEAT" id="52200">
+      <description>Guide Heartbeat</description>
+      <field type="uint8_t" name="proto_ver">proto ver.</field>
+      <field type="uint32_t" name="msg_id">msg id.</field>
+      <field type="uint32_t" name="seq">seq.</field>
+      <field type="uint32_t" name="session_id">session id.</field>
+      <field type="uint64_t" name="t_send_utc_ms">t send utc ms.</field>
+      <field type="uint8_t" name="node_id">node id.</field>
+      <field type="uint64_t" name="t_utc_ms">t utc ms.</field>
+      <field type="uint8_t" name="mode">mode.</field>
+      <field type="float" name="link_quality">link quality.</field>
+      <field type="uint8_t" name="health">health.</field>
+      <field type="uint32_t" name="snapshot_epoch">snapshot epoch.</field>
+      <field type="uint16_t" name="snapshot_count">snapshot count.</field>
+    </message>
+    <message name="CAR_STATE" id="52201">
+      <description>Car State</description>
+      <field type="uint8_t" name="proto_ver">proto ver.</field>
+      <field type="uint32_t" name="msg_id">msg id.</field>
+      <field type="uint32_t" name="seq">seq.</field>
+      <field type="uint32_t" name="session_id">session id.</field>
+      <field type="uint64_t" name="t_send_utc_ms">t send utc ms.</field>
+      <field type="double" name="lat">lat.</field>
+      <field type="double" name="lon">lon.</field>
+      <field type="float" name="speed_mps">speed mps.</field>
+      <field type="float" name="heading">heading.</field>
+      <field type="float" name="track_s_m">track s m.</field>
+      <field type="float" name="lateral_m">lateral m.</field>
+      <field type="uint8_t" name="drive_mode">drive mode.</field>
+    </message>
+    <message name="DRONE_STATE" id="52202">
+      <description>Drone State</description>
+      <field type="uint8_t" name="proto_ver">proto ver.</field>
+      <field type="uint32_t" name="msg_id">msg id.</field>
+      <field type="uint32_t" name="seq">seq.</field>
+      <field type="uint32_t" name="session_id">session id.</field>
+      <field type="uint64_t" name="t_send_utc_ms">t send utc ms.</field>
+      <field type="double" name="lat">lat.</field>
+      <field type="double" name="lon">lon.</field>
+      <field type="float" name="alt">alt.</field>
+      <field type="float" name="speed">speed.</field>
+      <field type="float" name="track_s_m">track s m.</field>
+      <field type="float" name="lead_distance_m">lead distance m.</field>
+      <field type="float" name="battery_pct">battery pct.</field>
+      <field type="uint8_t" name="sensor_ok">sensor ok.</field>
+    </message>
+    <message name="OBSTACLE_ALERT" id="52203">
+      <description>Obstacle Alert</description>
+      <field type="uint8_t" name="proto_ver">proto ver.</field>
+      <field type="uint32_t" name="msg_id">msg id.</field>
+      <field type="uint32_t" name="seq">seq.</field>
+      <field type="uint32_t" name="session_id">session id.</field>
+      <field type="uint64_t" name="t_send_utc_ms">t send utc ms.</field>
+      <field type="uint32_t" name="obstacle_id">obstacle id.</field>
+      <field type="uint64_t" name="t_detect_utc_ms">t detect utc ms.</field>
+      <field type="uint8_t" name="type">type.</field>
+      <field type="float" name="confidence">confidence.</field>
+      <field type="double" name="lat">lat.</field>
+      <field type="double" name="lon">lon.</field>
+      <field type="float" name="pos_err_m">pos err m.</field>
+      <field type="float" name="size_m">size m.</field>
+      <field type="float" name="track_s_m">track s m.</field>
+      <field type="float" name="lateral_m">lateral m.</field>
+      <field type="uint8_t" name="free_side">free side.</field>
+      <field type="uint8_t" name="severity">severity.</field>
+      <field type="uint32_t" name="ttl_ms">ttl ms.</field>
+      <field type="uint8_t" name="state">state.</field>
+      <field type="uint32_t" name="snapshot_epoch">snapshot epoch.</field>
+    </message>
+    <message name="HAZARD_CLEAR" id="52204">
+      <description>Hazard Clear</description>
+      <field type="uint8_t" name="proto_ver">proto ver.</field>
+      <field type="uint32_t" name="msg_id">msg id.</field>
+      <field type="uint32_t" name="seq">seq.</field>
+      <field type="uint32_t" name="session_id">session id.</field>
+      <field type="uint64_t" name="t_send_utc_ms">t send utc ms.</field>
+      <field type="uint32_t" name="obstacle_id">obstacle id.</field>
+      <field type="uint64_t" name="t_utc_ms">t utc ms.</field>
+    </message>
+    <message name="DRIVE_ADVICE" id="52205">
+      <description>Drive Advice</description>
+      <field type="uint8_t" name="proto_ver">proto ver.</field>
+      <field type="uint32_t" name="msg_id">msg id.</field>
+      <field type="uint32_t" name="seq">seq.</field>
+      <field type="uint32_t" name="session_id">session id.</field>
+      <field type="uint64_t" name="t_send_utc_ms">t send utc ms.</field>
+      <field type="uint8_t" name="advice_mode">advice mode.</field>
+      <field type="float" name="target_speed_mps">target speed mps.</field>
+      <field type="float" name="lateral_offset_m">lateral offset m.</field>
+      <field type="uint64_t" name="valid_until_ms">valid until ms.</field>
+      <field type="uint32_t" name="reason_obstacle_id">reason obstacle id.</field>
+    </message>
+    <message name="MODE_ACK" id="52206">
+      <description>Mode Ack</description>
+      <field type="uint8_t" name="proto_ver">proto ver.</field>
+      <field type="uint32_t" name="msg_id">msg id.</field>
+      <field type="uint32_t" name="seq">seq.</field>
+      <field type="uint32_t" name="session_id">session id.</field>
+      <field type="uint64_t" name="t_send_utc_ms">t send utc ms.</field>
+      <field type="uint32_t" name="ack_msg_id">ack msg id.</field>
+      <field type="uint8_t" name="accepted">accepted.</field>
+      <field type="uint8_t" name="applied_mode">applied mode.</field>
+      <field type="uint8_t" name="reject_reason">reject reason.</field>
+    </message>
+  </messages>
+</mavlink>

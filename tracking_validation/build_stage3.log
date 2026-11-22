@@ -1,0 +1,137 @@
+31 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.10
+31 INFO: Python: 3.12.1
+40 INFO: Platform: macOS-26.7.3-arm64-arm-64bit
+40 INFO: Python environment: /Users/kimmunju/workspace/Linker_mac/.venv
+44 INFO: Module search paths (PYTHONPATH):
+['/opt/local/Library/Frameworks/Python.framework/Versions/3.12/lib/python312.zip',
+ '/opt/local/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12',
+ '/opt/local/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/lib-dynload',
+ '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages',
+ '/Users/kimmunju/workspace/Linker_mac']
+176 INFO: Appending 'datas' from .spec
+177 INFO: checking Analysis
+177 INFO: Building Analysis because Analysis-00.toc is non existent
+177 INFO: Looking for Python shared library...
+179 INFO: Using Python shared library: /opt/local/Library/Frameworks/Python.framework/Versions/3.12/Python
+179 INFO: Running Analysis Analysis-00.toc
+179 INFO: Target bytecode optimization level: 0
+179 INFO: Initializing module dependency graph...
+180 INFO: Initializing module graph hook caches...
+185 INFO: Analyzing modules for base_library.zip ...
+549 INFO: Processing standard module hook 'hook-heapq.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+596 INFO: Processing standard module hook 'hook-encodings.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+1270 INFO: Processing standard module hook 'hook-math.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+1404 INFO: Processing standard module hook 'hook-pickle.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+2032 INFO: Caching module dependency graph...
+2052 INFO: Analyzing /Users/kimmunju/workspace/Linker_mac/main_window.py
+2115 INFO: Processing standard module hook 'hook-_ctypes.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+2166 INFO: Processing standard module hook 'hook-PyQt5.uic.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+2239 INFO: Processing standard module hook 'hook-PyQt5.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+2305 INFO: Processing pre-find-module-path hook 'hook-PyQt5.uic.port_v2.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_find_module_path'
+2347 INFO: Processing standard module hook 'hook-xml.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+2357 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+2637 INFO: Processing standard module hook 'hook-PyQt5.QtCore.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+3093 INFO: Processing standard module hook 'hook-PyQt5.QtWidgets.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+3456 INFO: Processing standard module hook 'hook-PyQt5.QtGui.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+3590 INFO: Processing standard module hook 'hook-numpy.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+3742 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+3744 INFO: SetuptoolsInfo: initializing cached setuptools info...
+4080 INFO: Processing standard module hook 'hook-platform.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+4171 INFO: Processing standard module hook 'hook-sysconfig.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+4178 INFO: Processing standard module hook 'hook-_osx_support.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+4312 INFO: Processing standard module hook 'hook-webbrowser.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+4834 INFO: Processing standard module hook 'hook-difflib.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+4938 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+5669 INFO: Processing standard module hook 'hook-charset_normalizer.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+5831 INFO: Processing standard module hook 'hook-pyqtgraph.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+124 WARNING: Failed to collect submodules for 'pyqtgraph.opengl' because importing 'pyqtgraph.opengl' raised: ModuleNotFoundError: No module named 'OpenGL'
+6167 INFO: hook-pyqtgraph: selected 'PyQt5' as Qt bindings because hook for 'PyQt5' has been run before.
+6185 INFO: Processing standard module hook 'hook-PyQt5.QtSvg.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+6232 INFO: Processing standard module hook 'hook-PyQt5.QtTest.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+6650 INFO: Processing standard module hook 'hook-xml.dom.domreg.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+7940 INFO: Processing standard module hook 'hook-lxml.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+8064 INFO: Processing standard module hook 'hook-lxml.etree.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+8171 INFO: Processing standard module hook 'hook-lxml.objectify.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+8986 INFO: Processing standard module hook 'hook-PyQt5.QtWebChannel.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+9032 INFO: Processing standard module hook 'hook-urllib3.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+9081 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+9082 INFO: Setuptools: 'backports' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.backports'!
+9085 INFO: Processing standard module hook 'hook-setuptools.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+9090 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+9103 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+9104 INFO: Setuptools: 'jaraco' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.jaraco'!
+9111 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+9111 INFO: Setuptools: 'more_itertools' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.more_itertools'!
+9250 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+9409 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+9410 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+9699 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+9700 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
+9993 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_safe_import_module'
+10197 INFO: Processing standard module hook 'hook-certifi.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+10309 INFO: Processing standard module hook 'hook-cv2.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+10500 INFO: Processing standard module hook 'hook-PyQt5.QtWebEngineWidgets.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+10610 INFO: Processing standard module hook 'hook-PyQt5.QtNetwork.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+10725 INFO: Processing standard module hook 'hook-PyQt5.QtPrintSupport.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+10776 INFO: Processing standard module hook 'hook-PyQt5.QtWebEngineCore.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+10913 INFO: Processing standard module hook 'hook-PyQt5.QtChart.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+11162 INFO: Analyzing hidden import 'pymavlink.dialects.v10.ardupilotmega'
+11719 INFO: Processing module hooks (post-graph stage)...
+11939 INFO: Processing standard module hook 'hook-lxml.isoschematron.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/stdhooks'
+12000 INFO: Processing standard module hook 'hook-PyQt5.QtQuick.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+12067 INFO: Processing standard module hook 'hook-PyQt5.QtQml.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+12298 INFO: Processing standard module hook 'hook-PyQt5.QtPositioning.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+12392 INFO: Processing standard module hook 'hook-PyQt5.QtQuickWidgets.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+12460 INFO: Performing binary vs. data reclassification (1566 entries)
+12574 INFO: Looking for ctypes DLLs
+12580 WARNING: Library Cfgmgr32 required via ctypes not found
+12580 WARNING: Library Advapi32 required via ctypes not found
+12580 WARNING: Library setupapi required via ctypes not found
+12581 WARNING: Ignoring /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation imported from /Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/serial/tools/list_ports_osx.py - only basenames are supported with ctypes imports!
+12581 WARNING: Ignoring /System/Library/Frameworks/IOKit.framework/IOKit imported from /Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/serial/tools/list_ports_osx.py - only basenames are supported with ctypes imports!
+12603 INFO: Analyzing run-time hooks ...
+12606 INFO: Including run-time hook 'pyi_rth_inspect.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/rthooks'
+12607 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/rthooks'
+12608 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/rthooks'
+12609 INFO: Including run-time hook 'pyi_rth_pyqtgraph_multiprocess.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/_pyinstaller_hooks_contrib/rthooks'
+12610 INFO: Including run-time hook 'pyi_rth_setuptools.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/rthooks'
+12610 INFO: Including run-time hook 'pyi_rth_pyqt5.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/rthooks'
+12611 INFO: Processing pre-find-module-path hook 'hook-_pyi_rth_utils.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks/pre_find_module_path'
+12612 INFO: Processing standard module hook 'hook-_pyi_rth_utils.py' from '/Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/hooks'
+12640 INFO: Creating base_library.zip...
+12650 INFO: Looking for dynamic libraries
+14880 INFO: Warnings written to /private/tmp/claude-501/-Users-kimmunju-workspace-Linker-mac/64700aca-a0fe-4719-9010-94742030f725/scratchpad/build/Linker_mac/warn-Linker_mac.txt
+14907 INFO: Graph cross-reference written to /private/tmp/claude-501/-Users-kimmunju-workspace-Linker-mac/64700aca-a0fe-4719-9010-94742030f725/scratchpad/build/Linker_mac/xref-Linker_mac.html
+15130 INFO: checking PYZ
+15130 INFO: Building PYZ because PYZ-00.toc is non existent
+15130 INFO: Building PYZ (ZlibArchive) /private/tmp/claude-501/-Users-kimmunju-workspace-Linker-mac/64700aca-a0fe-4719-9010-94742030f725/scratchpad/build/Linker_mac/PYZ-00.pyz
+15848 INFO: Building PYZ (ZlibArchive) /private/tmp/claude-501/-Users-kimmunju-workspace-Linker-mac/64700aca-a0fe-4719-9010-94742030f725/scratchpad/build/Linker_mac/PYZ-00.pyz completed successfully.
+15856 INFO: EXE target arch: arm64
+15856 INFO: Code signing identity: None
+15858 INFO: checking PKG
+15858 INFO: Building PKG because PKG-00.toc is non existent
+15858 INFO: Building PKG (CArchive) LINKER.pkg
+15899 INFO: Building PKG (CArchive) LINKER.pkg completed successfully.
+15899 INFO: Bootloader /Users/kimmunju/workspace/Linker_mac/.venv/lib/python3.12/site-packages/PyInstaller/bootloader/Darwin-64bit/runw
+15899 INFO: checking EXE
+15899 INFO: Building EXE because EXE-00.toc is non existent
+15899 INFO: Building EXE from EXE-00.toc
+15899 INFO: Copying bootloader EXE to /private/tmp/claude-501/-Users-kimmunju-workspace-Linker-mac/64700aca-a0fe-4719-9010-94742030f725/scratchpad/build/Linker_mac/LINKER
+15902 INFO: Converting EXE to target arch (arm64)
+15923 INFO: Removing signature(s) from EXE
+15942 INFO: Modifying Mach-O image UUID(s) in EXE
+15949 INFO: Appending PKG archive to EXE
+15952 INFO: Fixing EXE headers for code signing
+15955 INFO: Rewriting the executable's macOS SDK version (26.2.0) to match the SDK version of the Python library (14.2.0) in order to avoid inconsistent behavior and potential UI issues in the frozen application.
+15955 INFO: Re-signing the EXE
+15980 INFO: Building EXE from EXE-00.toc completed successfully.
+15991 INFO: checking COLLECT
+15991 INFO: Building COLLECT because COLLECT-00.toc is non existent
+15991 INFO: Building COLLECT COLLECT-00.toc
+17269 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+17298 INFO: checking BUNDLE
+17298 INFO: Building BUNDLE because BUNDLE-00.toc is non existent
+17298 INFO: Building BUNDLE BUNDLE-00.toc
+18600 INFO: Signing the BUNDLE...
+19112 INFO: Building BUNDLE BUNDLE-00.toc completed successfully.
+19132 INFO: Build complete! The results are available in: /private/tmp/claude-501/-Users-kimmunju-workspace-Linker-mac/64700aca-a0fe-4719-9010-94742030f725/scratchpad/dist

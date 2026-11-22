@@ -1,0 +1,127 @@
+[
+  {
+    "path": "Linker_mac.spec",
+    "before": "723dcdbadfdb915ef0c54fd0018f2ef28692e49e2f0a7e9df566a3f7226992ac",
+    "after": "bd2493839d043a6a7c20f6c9158004392c751cdf1a48c236686c47dcea893ba9"
+  },
+  {
+    "path": "docs/tracking_monitor.md",
+    "before": null,
+    "after": "aabdfd1b3d38bba02289f2b61a7955f6a7494132c9352a5eb1221726429f5df8"
+  },
+  {
+    "path": "fleet.py",
+    "before": "71a3afd1d06fbc61878e526d735bc5c5b1960add8e1f3f6a0e88d978b66a3785",
+    "after": "18aeca5302fbe113a04b3e5ceb2ec2f1d7b5b841f5e30921ce7c84e2d4de2c95"
+  },
+  {
+    "path": "guide_protocol.py",
+    "before": "b14e33491348cf5e9753534186f6ae5f1d785d197c822211c94460799a003c3e",
+    "after": "997524d9a5b63d15c9a69411eaad22cc4373307b62331e072c02ad6d5427607b"
+  },
+  {
+    "path": "guide_vehicle_panel.py",
+    "before": "6f92210b23e2d6989f9a16c2f3973ee798eec4ac708fc3e7626dc0bcbd7c7a9b",
+    "after": "4b73f46881a69bf839709eb1e3aabd7ba4010272a1e5863e203b55eaee3b53da"
+  },
+  {
+    "path": "main_window.py",
+    "before": "adecabf4db2fea43e874c44e3a994fbbd8cd3746e691179a36449b14cdfe2c37",
+    "after": "9d729932c2612901bb7642df5ac7211afa467afe9373278e252bf419e4b2b7ad"
+  },
+  {
+    "path": "tests/fixtures/sentinel_current.json",
+    "before": null,
+    "after": "ad3aef25d3c258abbd219fa2477c2ebc53c74c4492c1a2277fe922798da15455"
+  },
+  {
+    "path": "tests/fixtures/sentinel_legacy.json",
+    "before": null,
+    "after": "0502af4b6c43843b826b156e1782e2e5b708c5db1bd4545fff069d3e6308cd75"
+  },
+  {
+    "path": "tests/sentinel_namespace.py",
+    "before": null,
+    "after": "4f9f7358349ca34859e93e85f30dfd342454452771a455f6501fece9f727cbed"
+  },
+  {
+    "path": "tests/test_drive_dashboard.py",
+    "before": "6cf7d93d4dae39e9e8e73b6bf26f9e639340857e8cb406aa93b3e3db60c3db46",
+    "after": "733fbe5e110d07620ef5aef584f97af90923e5cfd13aeea10a786a260b1461ba"
+  },
+  {
+    "path": "tests/test_guide_stage1.py",
+    "before": "2f2086ea56ec32fdb100c2ec75a6a62b6478be9a76b6a61bc2c826b0f26b8b77",
+    "after": "9c6ea85ec67ae8590c504fcb733e3e8e4fb14ea68906080a0b9d8973bb2d36ed"
+  },
+  {
+    "path": "tests/test_sentinel_compat.py",
+    "before": null,
+    "after": "a81b09cc985f87385ac676566165a32a4a1fca331f709d2130e8c06bb4fd7476"
+  },
+  {
+    "path": "tests/test_shared_video.py",
+    "before": "f068f7ce83e928b9926898114569cde249507028050b579d8261f406bedeb21c",
+    "after": "911b56c0949a78c3266532aac65b4fa51f6cc1ddbfa77144391914e8af3aeb30"
+  },
+  {
+    "path": "tests/test_tracking_core.py",
+    "before": "e5a56f53ec0c6a3599c3699751121e2014b8e56a6900e606db50060325b01791",
+    "after": "72fba8bfbf7c002ec826aac828536c4f75446e65fa045a57e6986feb8b43947e"
+  },
+  {
+    "path": "tests/test_tracking_main_window.py",
+    "before": null,
+    "after": "3e70064ebddd1e40992fb611f7619823ed73334c39b67a9524d784ef583517df"
+  },
+  {
+    "path": "tests/test_tracking_replay.py",
+    "before": null,
+    "after": "27071362b31bfc690e41422fd3f90508b74eca075ee2a941b36297446b2bc727"
+  },
+  {
+    "path": "tests/test_tracking_session.py",
+    "before": null,
+    "after": "575e35e5afe06ea129f655f0728f35c66b7c8ddb96b3da3a17fcb6cadad8dce9"
+  },
+  {
+    "path": "tests/test_tracking_ui.py",
+    "before": null,
+    "after": "c129d884d4c818e417718b31cfed4ea9479ae1868c0f3a1ccf931302380643d2"
+  },
+  {
+    "path": "tools/run_tracking_validation.py",
+    "before": null,
+    "after": "3a1bdfe9b0839fd997a6f09afbe07c192c1cc12ceaa487b361ed83bff6c66f52"
+  },
+  {
+    "path": "tracking_core.py",
+    "before": "3e685c184189535cb98177c4f921f926e765453198ab477a68190de613466f04",
+    "after": "b6245e95186be6d47f3a1e73e059aed4a7ad909a509dc34ffc0c5eecf0b26c6d"
+  },
+  {
+    "path": "tracking_models.py",
+    "before": null,
+    "after": "2337278a45540819227959c8ef3ba2f434187261c3aa1768a36aef0b8d54b3df"
+  },
+  {
+    "path": "tracking_panel.py",
+    "before": null,
+    "after": "30abf6edfcd09d05f2ca0ca4409e3dd47fa953e1d07d411bf744dd8ba01f722a"
+  },
+  {
+    "path": "tracking_session.py",
+    "before": null,
+    "after": "7a7a4d69723f5a2d7ff8a00f6be7e54657a6fd912ca6093d3b62270b2b9755ad"
+  },
+  {
+    "path": "tracking_worker.py",
+    "before": null,
+    "after": "b32646fec18705a869e69d6c2c4a834108e78fb5ce13f842ba683beb441811b5"
+  },
+  {
+    "path": "video_grid.py",
+    "before": "923feb06a102ed83625ad78727ea56499db112151252f19af2e48737e7fe1426",
+    "after": "552c576457944dffc4b45e705957920e2768c3564b4afbc91470ba926c04fdb1"
+  }
+]

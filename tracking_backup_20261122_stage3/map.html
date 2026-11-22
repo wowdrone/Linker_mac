@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>LINKER Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #050d06;
+      font-family: "Malgun Gothic", Arial, sans-serif;
+    }
+    #toolbar {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      right: 4px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      z-index: 1000;
+      background: rgba(5, 13, 6, 0.92);
+      border-radius: 3px;
+      padding: 2px 6px;
+      box-sizing: border-box;
+    }
+    #map {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+    .btn {
+      background: #333;
+      color: #eee;
+      border: 1px solid #555;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .btn.active {
+      background: #e67e22;
+      color: #000;
+    }
+    .btn-small {
+      font-size: 10px;
+      padding: 1px 4px;
+    }
+    .label {
+      color: #ccc;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    input, select {
+      background: #111;
+      color: #eee;
+      border: 1px solid #555;
+      font-size: 11px;
+      height: 18px;
+      box-sizing: border-box;
+    }
+    #searchBox {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    #searchInput {
+      width: 220px;
+    }
+  </style>
+</head>
+<body>
+<div id="toolbar">
+  <!-- 모드 버튼 -->
+  <button id="btnMode2D" class="btn btn-small">2D</button>
+  <button id="btnModeSat" class="btn btn-small">Sat</button>
+  <button id="btnModeWP" class="btn btn-small">WP MODE</button>
+  <button id="btnModeGF" class="btn btn-small">Geo Fence</button>
+  <button id="btnModeCircle" class="btn btn-small">Circle</button>
+
+  <!-- Circle 옵션 -->
+  <span class="label">R(m)</span>
+  <input id="circleRadius" type="number" value="100" style="width:55px;" />
+
+  <span class="label">Alt(m)</span>
+  <input id="circleAlt" type="number" value="60" style="width:55px;" />
+
+  <span class="label">Spd(m/s)</span>
+  <input id="circleSpeed" type="number" value="8" style="width:50px;" />
+
+  <span class="label">Dir</span>
+  <select id="circleDir" style="width:70px;">
+    <option value="cw">CW</option>
+    <option value="ccw">CCW</option>
+  </select>
+
+  <button id="btnCircleClear" class="btn btn-small">Clear</button>
+  <button id="btnCircleToWP" class="btn btn-small">→WP</button>
+
+  <!-- 검색 -->
+  <div id="searchBox">
+    <input id="searchInput" type="text" placeholder="주소 또는 장소 검색" />
+    <button id="btnSearch" class="btn btn-small">Go</button>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+  // ---------------- WebChannel 브리지 ----------------
+  let bridge = null;
+  new QWebChannel(qt.webChannelTransport, function (channel) {
+    bridge = channel.objects.bridge;
+  });
+
+  // ---------------- 지도 기본 설정 ----------------
+  const DEFAULT_LAT = 37.5196976;
+  const DEFAULT_LON = 126.6109531;
+
+  const map = L.map("map", {
+    center: [DEFAULT_LAT, DEFAULT_LON],
+    zoom: 17,
+  });
+  // 파이썬에서 window.map 체크 가능하도록
+  window.map = map;
+
+  // 타일 레이어 (2D / Sat)
+  const baseLayer = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap",
+    }
+  );
+
+  const esriSat = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      maxZoom: 19,
+      attribution: "Esri",
+    }
+  );
+
+  // 기본은 위성지도
+  esriSat.addTo(map);
+
+  // ---------------- 드론 / 홈 마커 + 헤딩선 + 궤적 ----------------
+  let droneMarker = null;
+  let homeMarker = null;
+  let droneHeadingLine = null;
+
+  // 궤적(트랙)
+  let droneTrackLine = null;
+  let droneTrackCoords = [];
+
+  const droneIcon = L.icon({
+    iconUrl: "quad.png",
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+  });
+
+  // 파이썬에서 호출: 위치 + 헤딩
+  function pythonUpdateDrone(lat, lon, headingDeg) {
+    lat = Number(lat);
+    lon = Number(lon);
+    headingDeg = Number(headingDeg);
+
+    if (!isFinite(lat) || !isFinite(lon)) return;
+
+    // 1) 드론 마커 생성 / 이동
+    if (!droneMarker) {
+      droneMarker = L.marker([lat, lon], {
+        alt: "드론",
+        zIndexOffset: 1000,
+        icon: droneIcon,
+      }).addTo(map);
+    } else {
+      droneMarker.setLatLng([lat, lon]);
+    }
+
+    // 2) 궤적(주황색) 업데이트
+    if (droneTrackCoords.length === 0) {
+      droneTrackCoords.push([lat, lon]);
+      droneTrackLine = L.polyline(droneTrackCoords, {
+        color: "#ff9900",
+        weight: 2,
+        opacity: 0.9,
+      }).addTo(map);
+    } else {
+      const last = droneTrackCoords[droneTrackCoords.length - 1];
+      const dist = map.distance([last[0], last[1]], [lat, lon]); // m
+      // 너무 자주 찍히지 않도록 0.5m 이상 움직였을 때만 추가
+      if (dist > 0.5) {
+        droneTrackCoords.push([lat, lon]);
+        droneTrackLine.setLatLngs(droneTrackCoords);
+      }
+    }
+
+    // 3) 이전 헤딩선 제거
+    if (droneHeadingLine) {
+      map.removeLayer(droneHeadingLine);
+      droneHeadingLine = null;
+    }
+
+    // 헤딩값이 없으면 선 그리지 않음
+    if (!isFinite(headingDeg)) return;
+
+    // 4) 헤딩 기준 80m 앞 점 계산 (빨간 선)
+    const lengthMeters = 80.0;
+    const R = 6371000.0;
+
+    const phi1 = (lat * Math.PI) / 180.0;
+    const lambda1 = (lon * Math.PI) / 180.0;
+    const brng = (headingDeg * Math.PI) / 180.0; // 0=N, 시계방향
+    const d = lengthMeters / R;
+
+    const sinPhi1 = Math.sin(phi1);
+    const cosPhi1 = Math.cos(phi1);
+    const sinD = Math.sin(d);
+    const cosD = Math.cos(d);
+    const sinBrng = Math.sin(brng);
+    const cosBrng = Math.cos(brng);
+
+    const sinPhi2 = sinPhi1 * cosD + cosPhi1 * sinD * cosBrng;
+    const phi2 = Math.asin(sinPhi2);
+
+    const y = sinBrng * sinD * cosPhi1;
+    const x = cosD - sinPhi1 * sinPhi2;
+    const lambda2 = lambda1 + Math.atan2(y, x);
+
+    const lat2 = (phi2 * 180.0) / Math.PI;
+    const lon2 = (lambda2 * 180.0) / Math.PI;
+
+    droneHeadingLine = L.polyline(
+      [
+        [lat, lon],
+        [lat2, lon2],
+      ],
+      {
+        color: "#ff0000",  // 헤딩 지시선 (빨강)
+        weight: 3,
+        opacity: 0.9,
+      }
+    ).addTo(map);
+  }
+
+  // 파이썬에서 필요하면 궤적 초기화할 때 사용 (옵션)
+  function pythonClearTrack() {
+    if (droneTrackLine) {
+      map.removeLayer(droneTrackLine);
+      droneTrackLine = null;
+    }
+    droneTrackCoords = [];
+  }
+
+  function pythonUpdateHome(lat, lon) {
+    lat = Number(lat);
+    lon = Number(lon);
+    if (!isFinite(lat) || !isFinite(lon)) return;
+
+    if (!homeMarker) {
+      homeMarker = L.marker([lat, lon], { title: "HOME" }).addTo(map);
+      homeMarker.bindTooltip("H", { permanent: true, offset: [0, -20] });
+    } else {
+      homeMarker.setLatLng([lat, lon]);
+    }
+  }
+
+  // ---------------- WP 표시 ----------------
+  let wpMarkers = [];
+  let wpPolyline = null;
+
+  function clearWaypoints() {
+    wpMarkers.forEach((m) => map.removeLayer(m));
+    wpMarkers = [];
+    if (wpPolyline) {
+      map.removeLayer(wpPolyline);
+      wpPolyline = null;
+    }
+  }
+
+  function pythonSetWaypoints(points) {
+    clearWaypoints();
+    if (!points || !points.length) return;
+
+    const latlngs = [];
+    points.forEach((p, idx) => {
+      const lat = p[0];
+      const lon = p[1];
+      const m = L.circleMarker([lat, lon], {
+        radius: 4,
+        color: "#00ffbf",
+      }).addTo(map);
+      m.bindTooltip("#" + (idx + 1), { permanent: true, offset: [0, -12] });
+      wpMarkers.push(m);
+      latlngs.push([lat, lon]);
+    });
+
+    wpPolyline = L.polyline(latlngs, { color: "#00ff40" }).addTo(map);
+    map.fitBounds(wpPolyline.getBounds(), { padding: [40, 40] });
+  }
+
+  // ---------------- 검색 ----------------
+  function pythonSearchResult(payload) {
+    try {
+      const data = JSON.parse(payload);
+      const lat = data.lat;
+      const lon = data.lon;
+      const name = data.name || "Result";
+
+      map.setView([lat, lon], 18);
+      const m = L.marker([lat, lon]).addTo(map);
+      m.bindPopup(name).openPopup();
+    } catch (e) {
+      console.log("search result error:", e);
+    }
+  }
+
+  function pythonSearchError(msg) {
+    alert(msg);
+  }
+
+  document.getElementById("btnSearch").onclick = function () {
+    const q = document.getElementById("searchInput").value.trim();
+    if (!q || !bridge || !bridge.requestSearch) return;
+    bridge.requestSearch(q);
+  };
+
+  document
+    .getElementById("searchInput")
+    .addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        document.getElementById("btnSearch").click();
+      }
+    });
+
+  // ---------------- 모드 관리 ----------------
+  let mapMode = "sat"; // 기본 sat
+
+  function updateBaseLayer() {
+    if (mapMode === "sat") {
+      if (map.hasLayer(baseLayer)) map.removeLayer(baseLayer);
+      if (!map.hasLayer(esriSat)) map.addLayer(esriSat);
+    } else {
+      if (map.hasLayer(esriSat)) map.removeLayer(esriSat);
+      if (!map.hasLayer(baseLayer)) map.addLayer(baseLayer);
+    }
+  }
+
+  function setMode(mode) {
+    mapMode = mode;
+
+    if (bridge && bridge.setMapMode) {
+      bridge.setMapMode(mode);
+    }
+
+    document
+      .querySelectorAll("#toolbar .btn")
+      .forEach((b) => b.classList.remove("active"));
+
+    if (mode === "base") {
+      document.getElementById("btnMode2D").classList.add("active");
+    }
+    if (mode === "sat") {
+      document.getElementById("btnMode2D").classList.add("active");
+      document.getElementById("btnModeSat").classList.add("active");
+    }
+    if (mode === "wp") {
+      document.getElementById("btnModeWP").classList.add("active");
+    }
+    if (mode === "gf") {
+      document.getElementById("btnModeGF").classList.add("active");
+    }
+    if (mode === "circle") {
+      document.getElementById("btnModeCircle").classList.add("active");
+    }
+
+    updateBaseLayer();
+  }
+
+  document.getElementById("btnMode2D").onclick = function () {
+    setMode("base");
+  };
+  document.getElementById("btnModeSat").onclick = function () {
+    setMode("sat");
+  };
+  document.getElementById("btnModeWP").onclick = function () {
+    setMode("wp");
+  };
+  document.getElementById("btnModeGF").onclick = function () {
+    setMode("gf");
+  };
+  document.getElementById("btnModeCircle").onclick = function () {
+    setMode("circle");
+  };
+
+  // ---------------- Circle 미리보기 ----------------
+  const inpCircleRadius = document.getElementById("circleRadius");
+  const inpCircleAlt    = document.getElementById("circleAlt");
+  const inpCircleSpeed  = document.getElementById("circleSpeed");
+  const selCircleDir    = document.getElementById("circleDir");
+  const btnCircleClear  = document.getElementById("btnCircleClear");
+  const btnCircleToWP   = document.getElementById("btnCircleToWP");
+
+  let circleCenter = null;          // L.LatLng
+  let circleRadius = 100;           // m
+  let circleStartAngleDeg = 0;      // 시작각
+  let circleDirection = "cw";       // "cw" or "ccw"
+
+  let circlePolyline = null;
+  let circleDots = [];
+  let circleStartMarker = null;
+
+  function clearCircle() {
+    if (circlePolyline) {
+      map.removeLayer(circlePolyline);
+      circlePolyline = null;
+    }
+    circleDots.forEach((m) => map.removeLayer(m));
+    circleDots = [];
+    if (circleStartMarker) {
+      map.removeLayer(circleStartMarker);
+      circleStartMarker = null;
+    }
+    circleCenter = null;
+  }
+
+  btnCircleClear.onclick = clearCircle;
+
+  function drawCircleFromOptions() {
+    if (!circleCenter) return;
+
+    const radius = parseFloat(inpCircleRadius.value) || circleRadius;
+    circleRadius = radius;
+    const alt = parseFloat(inpCircleAlt.value) || 60;
+    const spd = parseFloat(inpCircleSpeed.value) || 8;
+    const dir = selCircleDir.value; // "cw" | "ccw"
+
+    const steps = 72;
+    const R = 6371000.0;
+    const lat0 = (circleCenter.lat * Math.PI) / 180.0;
+    const lng0 = (circleCenter.lng * Math.PI) / 180.0;
+
+    if (circlePolyline) map.removeLayer(circlePolyline);
+    circleDots.forEach((m) => map.removeLayer(m));
+    circleDots = [];
+    if (circleStartMarker) {
+      map.removeLayer(circleStartMarker);
+      circleStartMarker = null;
+    }
+
+    const latlngs = [];
+    for (let i = 0; i <= steps; i++) {
+      let deg =
+        circleStartAngleDeg +
+        (dir === "cw" ? -1 : 1) * (i / steps) * 360.0;
+
+      const rad = (deg * Math.PI) / 180.0;
+      const d = radius / R;
+
+      const lat = Math.asin(
+        Math.sin(lat0) * Math.cos(d) +
+          Math.cos(lat0) * Math.sin(d) * Math.cos(rad)
+      );
+      const lng =
+        lng0 +
+        Math.atan2(
+          Math.sin(rad) * Math.sin(d) * Math.cos(lat0),
+          Math.cos(d) - Math.sin(lat0) * Math.sin(lat)
+        );
+
+      latlngs.push([(lat * 180.0) / Math.PI, (lng * 180.0) / Math.PI]);
+    }
+
+    circlePolyline = L.polyline(latlngs, {
+      color: "#ffff00",
+      weight: 2,
+      dashArray: "6,4",
+    }).addTo(map);
+
+    const start = latlngs[0];
+    circleStartMarker = L.marker(start).addTo(map);
+    circleStartMarker.bindTooltip(
+      `S  Dir:${dir.toUpperCase()} Alt:${alt}m Spd:${spd}m/s`,
+      { permanent: false, offset: [0, -10] }
+    );
+
+    latlngs.forEach((p, idx) => {
+      if (idx % 4 !== 0) return;
+      const dot = L.circleMarker(p, {
+        radius: 3,
+        color: "#ffffff",
+        fillColor: "#ff8800",
+        fillOpacity: 0.9,
+      }).addTo(map);
+      circleDots.push(dot);
+    });
+  }
+
+  function sendCirclePointsToPython() {
+    if (!circlePolyline || !bridge || !bridge.waypointClicked) {
+      console.log("Circle or bridge not ready.");
+      return;
+    }
+    const latlngs = circlePolyline.getLatLngs();
+    latlngs.forEach((p, idx) => {
+      bridge.waypointClicked(p.lat, p.lng);
+    });
+  }
+
+  if (btnCircleToWP) {
+    btnCircleToWP.onclick = sendCirclePointsToPython;
+  }
+
+  inpCircleRadius.addEventListener("change", drawCircleFromOptions);
+  inpCircleAlt.addEventListener("change", drawCircleFromOptions);
+  inpCircleSpeed.addEventListener("change", drawCircleFromOptions);
+  selCircleDir.addEventListener("change", drawCircleFromOptions);
+
+  function pythonUpdateCircleOptions(opts) {
+    if (typeof opts === "string") {
+      try {
+        opts = JSON.parse(opts);
+      } catch (e) {
+        return;
+      }
+    }
+    if (opts.lat !== undefined && opts.lon !== undefined) {
+      circleCenter = L.latLng(opts.lat, opts.lon);
+    }
+    if (opts.radius !== undefined) inpCircleRadius.value = opts.radius;
+    if (opts.alt !== undefined) inpCircleAlt.value = opts.alt;
+    if (opts.speed !== undefined) inpCircleSpeed.value = opts.speed;
+    if (opts.direction === "CW" || opts.direction === "CCW") {
+      selCircleDir.value = opts.direction.toLowerCase();
+    }
+    drawCircleFromOptions();
+  }
+
+  // ---------------- 지도 클릭 처리 ----------------
+  map.on("click", function (e) {
+    // WP MODE: 클릭 → Python 으로 전달
+    if (mapMode === "wp") {
+      if (bridge && bridge.waypointClicked) {
+        bridge.waypointClicked(e.latlng.lat, e.latlng.lng);
+      }
+      return;
+    }
+
+    // Circle 모드: 중심/반경 설정
+    if (mapMode !== "circle") return;
+
+    const R = 6371000.0;
+    const lat2 = (e.latlng.lat * Math.PI) / 180.0;
+    const lon2 = (e.latlng.lng * Math.PI) / 180.0;
+
+    if (!circleCenter) {
+      circleCenter = e.latlng;
+      drawCircleFromOptions();
+      return;
+    }
+
+    const lat1 = (circleCenter.lat * Math.PI) / 180.0;
+    const lon1 = (circleCenter.lng * Math.PI) / 180.0;
+
+    const dLat = lat2 - lat1;
+    const dLon = lon2 - lon1;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) *
+        Math.cos(lat2) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    circleRadius = R * c;
+
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x =
+      Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    let brngDeg = (Math.atan2(y, x) * 180.0) / Math.PI;
+    circleStartAngleDeg = (brngDeg + 360.0) % 360.0;
+
+    if (inpCircleRadius) {
+      inpCircleRadius.value = Math.round(circleRadius);
+    }
+
+    drawCircleFromOptions();
+  });
+
+  // ---------------- Python이 호출할 함수 export ----------------
+  window.pythonUpdateDrone = pythonUpdateDrone;
+  window.pythonUpdateHome = pythonUpdateHome;
+  window.pythonSetWaypoints = pythonSetWaypoints;
+  window.pythonSearchResult = pythonSearchResult;
+  window.pythonSearchError = pythonSearchError;
+  window.pythonUpdateCircleOptions = pythonUpdateCircleOptions;
+  window.pythonClearTrack = pythonClearTrack;
+
+  // 초기 모드: Sat
+  setMode("sat");
+</script>
+</body>
+</html>

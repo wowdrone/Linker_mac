@@ -1,0 +1,1416 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linker Drive</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,700;1,900&display=swap">
+<style>
+/* Layout: Linker header + advisory banner + 4 metric cards, then 3 columns: gauges | course view | Sentinel alerts & protocol log. */
+:root {
+  --bg: #101319; --header: #191d26; --panel: #242933; --field: #181c24; --border: #3a4352;
+  --text: #f3f6fa; --muted: #a8b3c4; --accent: #60d7ff; --accent-text: #092332;
+  --selected: #21394c; --hover: #343b49; --secondary: #c3a5ff; --success: #7cebd1;
+  --warning: #ffc177; --danger: #ff82aa;
+  --card-a: #29303b; --card-b: #1c2028; --edge-top: #414b5a; --edge-bot: #11151c;
+  --head-a: #272c38; --head-b: #171b23;
+  --radius: 18px; --btn-radius: 11px;
+  --arc-1: var(--accent); --arc-2: var(--success); --arc-3: var(--danger);
+  --led-1: var(--success); --led-2: var(--danger); --led-3: var(--secondary); --led-off: var(--field);
+  --stripe: none; --stripe-h: 0px;
+  --lv0-bg: #45515e; --lv0-fg: #ffffff; --lv1-bg: #ffe066; --lv1-fg: #201b0e;
+  --lv2-bg: #ffae58; --lv2-fg: #211407; --lv3-bg: #b41229; --lv3-fg: #ffffff;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+  --display: var(--font); --display-style: normal; --display-weight: 700; --label-case: none; --label-track: 0;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #edf2fa; --header: #ffffff; --panel: #ffffff; --field: #f6f8fd; --border: #c9d5e5;
+    --text: #172941; --muted: #546884; --accent: #165cbe; --accent-text: #ffffff;
+    --selected: #d9e8ff; --hover: #e8effa; --secondary: #6947ad; --success: #106b54;
+    --warning: #8b4d10; --danger: #ac2340;
+    --card-a: #ffffff; --card-b: #ffffff; --edge-top: #c9d5e5; --edge-bot: #c9d5e5;
+    --head-a: #ffffff; --head-b: #ffffff; --radius: 12px; --btn-radius: 7px;
+    --led-off: #e3e9f2;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #edf2fa; --header: #ffffff; --panel: #ffffff; --field: #f6f8fd; --border: #c9d5e5;
+  --text: #172941; --muted: #546884; --accent: #165cbe; --accent-text: #ffffff;
+  --selected: #d9e8ff; --hover: #e8effa; --secondary: #6947ad; --success: #106b54;
+  --warning: #8b4d10; --danger: #ac2340;
+  --card-a: #ffffff; --card-b: #ffffff; --edge-top: #c9d5e5; --edge-bot: #c9d5e5;
+  --head-a: #ffffff; --head-b: #ffffff; --radius: 12px; --btn-radius: 7px;
+  --led-off: #e3e9f2;
+  color-scheme: light;
+}
+/* F1: carbon black, racing red, timing-screen purple / green / yellow, chequered stripe */
+:root[data-linker="f1"] {
+  --bg: #0b0b0e; --header: #15151a; --panel: #17171c; --field: #0e0e12; --border: #2c2c34;
+  --text: #ffffff; --muted: #9b9ba8; --accent: #e10600; --accent-text: #ffffff;
+  --selected: #2b0d0c; --hover: #24242b; --secondary: #b26bff; --success: #2ee86a;
+  --warning: #ffd60a; --danger: #ff5a36;
+  --card-a: #1d1d23; --card-b: #111115; --edge-top: #34343d; --edge-bot: #050507;
+  --head-a: #1a1a20; --head-b: #0f0f13; --radius: 6px; --btn-radius: 3px;
+  --arc-1: #2ee86a; --arc-2: #e10600; --arc-3: #b26bff;
+  --led-1: #2ee86a; --led-2: #e10600; --led-3: #4d7cff; --led-off: #1f1f26;
+  --stripe: repeating-conic-gradient(#ffffff 0 25%, #0b0b0e 0 50%) 0 0 / 8px 8px;
+  --stripe-h: 8px;
+  --font: "Titillium Web", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", system-ui, sans-serif;
+  --display: "Titillium Web", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
+  --display-style: italic; --display-weight: 900; --label-case: uppercase; --label-track: .08em;
+  color-scheme: dark;
+}
+:root[data-linker="neo"] {
+  --bg: #101319; --header: #191d26; --panel: #242933; --field: #181c24; --border: #3a4352;
+  --text: #f3f6fa; --muted: #a8b3c4; --accent: #60d7ff; --accent-text: #092332;
+  --selected: #21394c; --hover: #343b49; --secondary: #c3a5ff; --success: #7cebd1;
+  --warning: #ffc177; --danger: #ff82aa;
+  --card-a: #29303b; --card-b: #1c2028; --edge-top: #414b5a; --edge-bot: #11151c;
+  --head-a: #272c38; --head-b: #171b23; --radius: 18px; --btn-radius: 11px;
+  color-scheme: dark;
+}
+:root[data-linker="dark"] {
+  --bg: #141821; --header: #191e28; --panel: #202632; --field: #171d27; --border: #353f50;
+  --text: #eef3fc; --muted: #a2b1c5; --accent: #63d0ff; --accent-text: #0c2433;
+  --selected: #254259; --hover: #2b3647; --secondary: #ba9bff; --success: #72dfba;
+  --warning: #ffc181; --danger: #ff8295;
+  --card-a: #202632; --card-b: #202632; --edge-top: #353f50; --edge-bot: #353f50;
+  --head-a: #191e28; --head-b: #191e28; --radius: 14px; --btn-radius: 7px;
+  color-scheme: dark;
+}
+:root[data-linker="light"] {
+  --bg: #edf2fa; --header: #ffffff; --panel: #ffffff; --field: #f6f8fd; --border: #c9d5e5;
+  --text: #172941; --muted: #546884; --accent: #165cbe; --accent-text: #ffffff;
+  --selected: #d9e8ff; --hover: #e8effa; --secondary: #6947ad; --success: #106b54;
+  --warning: #8b4d10; --danger: #ac2340;
+  --card-a: #ffffff; --card-b: #ffffff; --edge-top: #c9d5e5; --edge-bot: #c9d5e5;
+  --head-a: #ffffff; --head-b: #ffffff; --radius: 12px; --btn-radius: 7px;
+  --led-off: #e3e9f2;
+  color-scheme: light;
+}
+:root[data-linker="cyber"] {
+  --bg: #0c0b18; --header: #131026; --panel: #19142c; --field: #0e1120; --border: #4b3870;
+  --text: #edf4ff; --muted: #b4a6d1; --accent: #3cf5ed; --accent-text: #081e22;
+  --selected: #213c54; --hover: #2e244a; --secondary: #fc8cee; --success: #6bf2af;
+  --warning: #ffcc74; --danger: #ff83a2;
+  --card-a: #19142c; --card-b: #19142c; --edge-top: #4b3870; --edge-bot: #4b3870;
+  --head-a: #131026; --head-b: #131026; --radius: 4px; --btn-radius: 3px;
+  color-scheme: dark;
+}
+:root[data-linker="simple"] {
+  --bg: #f2f2ee; --header: #fafaf7; --panel: #fafaf7; --field: #ffffff; --border: #d5d8d0;
+  --text: #252a26; --muted: #5c675f; --accent: #395a49; --accent-text: #ffffff;
+  --selected: #e0e9df; --hover: #eaece5; --secondary: #4b6154; --success: #246146;
+  --warning: #7f5419; --danger: #a83a40;
+  --card-a: #fafaf7; --card-b: #fafaf7; --edge-top: #d5d8d0; --edge-bot: #d5d8d0;
+  --head-a: #fafaf7; --head-b: #fafaf7; --radius: 4px; --btn-radius: 4px;
+  --led-off: #e6e8e1;
+  color-scheme: light;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 13px;
+  padding-block: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  height:100vh; height:100dvh; overflow:hidden;
+}
+.num { font-variant-numeric: tabular-nums; }
+.disp { font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight); }
+.wrap { max-width: 1520px; height:100%; min-height:0; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; overflow:hidden; }
+[hidden] { display: none !important; }
+
+/* Header — QWidget#linkerHeader */
+.hdr {
+  position: relative;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + var(--stripe-h)) max(16px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(180deg, var(--head-a), var(--head-b));
+  border-bottom: 1px solid var(--border);
+}
+.hdr::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--stripe-h);
+  background: var(--stripe);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 55%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 55%);
+}
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand svg { width: 28px; height: 28px; }
+.brand b { font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: 21px; letter-spacing: -0.01em; }
+.nav { display: flex; gap: 4px; margin-left: 6px; }
+.nav span {
+  padding: 6px 10px; border-radius: var(--btn-radius); font-weight: 700; font-size: 13px; color: var(--accent);
+  background: linear-gradient(90deg, var(--selected), var(--hover));
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--border));
+  border-bottom: 2px solid var(--accent);
+  text-transform: var(--label-case); letter-spacing: var(--label-track);
+}
+.badges { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--btn-radius);
+  padding: 4px 8px; color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap;
+}
+.badge i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.badge[data-tone="success"] { color: var(--success); } .badge[data-tone="success"] i { background: var(--success); }
+.badge[data-tone="warning"] { color: var(--warning); } .badge[data-tone="warning"] i { background: var(--warning); }
+.badge[data-tone="danger"] { color: var(--danger); } .badge[data-tone="danger"] i { background: var(--danger); }
+.badge[data-tone="accent"] { color: var(--accent); } .badge[data-tone="accent"] i { background: var(--accent); }
+select#appearance {
+  background: linear-gradient(135deg, var(--selected), var(--panel)); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--btn-radius);
+  padding: 5px 8px; font: 700 12px var(--font);
+}
+select#appearance:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Advisory banner — GuideVehiclePanel banner */
+.banner {
+  border-radius: var(--btn-radius); padding: 10px 14px; text-align: center;
+  font-family: var(--display); font-style: var(--display-style);
+  font-size: clamp(16px, 2.2vw, 22px); font-weight: 800; letter-spacing: -0.01em;
+  background: var(--lv0-bg); color: var(--lv0-fg); transition: background .2s, color .2s;
+}
+.banner[data-level="1"] { background: var(--lv1-bg); color: var(--lv1-fg); }
+.banner[data-level="2"] { background: var(--lv2-bg); color: var(--lv2-fg); }
+.banner[data-level="3"] { background: var(--lv3-bg); color: var(--lv3-fg); }
+
+/* Cards — dashboardCard (Neo layered) */
+.card {
+  background: linear-gradient(160deg, var(--card-a), var(--card-b));
+  border: 1px solid var(--border); border-top-color: var(--edge-top); border-bottom: 2px solid var(--edge-bot);
+  border-radius: var(--radius); padding: 14px; min-width: 0; min-height:0; resize:both; overflow:auto;
+}
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.title { font-weight: 700; font-size: 14px; text-transform: var(--label-case); letter-spacing: var(--label-track); }
+.caption { color: var(--muted); font-size: 11.5px; }
+
+/* Metric cards — flightMetric speed / altitude / distance */
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.metric { --tone: var(--accent); border-left: 3px solid var(--tone);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--tone) 20%, var(--panel)), var(--panel)); }
+.metric[data-k="rpm"] { --tone: var(--secondary); }
+.metric[data-k="hazard"] { --tone: var(--warning); }
+.metric[data-k="lead"] { --tone: var(--success); }
+.metric .caption { text-transform: var(--label-case); letter-spacing: var(--label-track); }
+.metric .val { color: var(--tone); font-family: var(--display); font-style: var(--display-style); font-size: 27px; font-weight: var(--display-weight); line-height: 1.1; margin-top: 4px; }
+.metric .val small { font-size: 13px; font-weight: 600; font-style: normal; color: var(--muted); margin-left: 3px; }
+.metric .sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+
+/* Main grid */
+.grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 1200px) { .grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); } .col-c { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 520px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+.col-c-inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (max-width: 1200px) and (min-width: 761px) { .col-c-inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+
+/* Shift lights (RPM) */
+.shift { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 4px; max-width: 440px; margin: 2px auto 22px; }
+.shift span { height: 9px; border-radius: 5px; background: var(--led-off); border: 1px solid var(--border); transition: background .06s; }
+.shift span.on[data-z="1"] { background: var(--led-1); border-color: var(--led-1); box-shadow: 0 0 8px var(--led-1); }
+.shift span.on[data-z="2"] { background: var(--led-2); border-color: var(--led-2); box-shadow: 0 0 8px var(--led-2); }
+.shift span.on[data-z="3"] { background: var(--led-3); border-color: var(--led-3); box-shadow: 0 0 8px var(--led-3); }
+.shift.limit span { animation: limit .16s steps(2) infinite; }
+@keyframes limit { 50% { opacity: .15; } }
+
+/* Gauges */
+.gauge { position: relative; width: 100%; max-width: 440px; margin: 0 auto; aspect-ratio: 1 / 1; }
+.gauge svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.gauge .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.speed-val { font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(44px, 7vw, 76px); line-height: 1; letter-spacing: -0.03em; }
+.speed-unit { color: var(--muted); font-weight: 600; font-size: 13px; margin-top: 2px; }
+.rpm-meta { display: flex; gap: 14px; margin-top: 10px; }
+.rpm-meta div { text-align: center; }
+.rpm-meta .k { color: var(--muted); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; }
+.rpm-meta .v { font-size: 15px; font-weight: 700; }
+.rpm-meta .v.sec { color: var(--secondary); }
+.rpm-meta .v.acc { color: var(--accent); font-family: var(--display); font-style: var(--display-style); font-size: 19px; line-height: 1; }
+.hdg-val { font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(30px, 4.4vw, 42px); letter-spacing: -0.02em; }
+.hdg-card { color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: .14em; }
+
+/* Bars (QProgressBar) */
+.tiles { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.tile { background: var(--field); border: 1px solid var(--border); border-radius: var(--btn-radius); padding: 9px 10px; min-width: 0; }
+.tile .k { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: var(--label-case); letter-spacing: var(--label-track); }
+.tile .v { font-size: 18px; font-weight: 700; margin: 2px 0 6px; }
+.bar { height: 6px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+.bar span { display: block; height: 100%; background: var(--success); border-radius: 3px; }
+.bar.brk span { background: var(--accent); }
+.bar.ers span { background: var(--warning); }
+.bar.g span { background: var(--secondary); }
+
+/* Course view */
+.course { width: 100%; max-width: 360px; margin: 0 auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; color: var(--muted); font-size: 11px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+/* Alerts list (QListWidget) */
+.list { display: flex; flex-direction: column; gap: 6px; }
+.item {
+  display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  background: var(--field); border: 1px solid var(--border); border-radius: var(--btn-radius); padding: 8px 10px 8px 0; overflow: hidden;
+}
+.item .sev { align-self: stretch; background: var(--lv0-bg); }
+.item[data-level="1"] .sev { background: var(--lv1-bg); }
+.item[data-level="2"] .sev { background: var(--lv2-bg); }
+.item[data-level="3"] .sev { background: var(--lv3-bg); }
+.item .t { font-weight: 700; font-size: 13px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.item .t em { font-style: normal; color: var(--muted); font-weight: 600; font-size: 11px; }
+.item .m { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.item .r { text-align: right; font-weight: 700; font-size: 15px; }
+.item .r small { display: block; color: var(--muted); font-size: 11px; font-weight: 600; }
+.empty { color: var(--muted); font-size: 12px; padding: 14px; text-align: center; background: var(--field); border: 1px dashed var(--border); border-radius: var(--btn-radius); }
+
+/* Protocol log (QTableWidget) */
+.rates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.rate { background: var(--field); border: 1px solid var(--border); border-radius: var(--btn-radius); padding: 6px 8px; min-width: 0; }
+.rate .k { color: var(--muted); font-size: 10.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rate .v { font-weight: 700; font-size: 13px; }
+.log-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--btn-radius); }
+table.log { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; min-width: 460px; }
+table.log th { text-align: left; color: var(--muted); background: var(--panel); font-weight: 700; padding: 5px 8px; border-bottom: 1px solid var(--border); font-family: var(--font); }
+table.log td { padding: 4px 8px; border-bottom: 1px solid color-mix(in oklab, var(--border) 50%, transparent); white-space: nowrap; }
+table.log tr:last-child td { border-bottom: 0; }
+td.dir-S { color: var(--accent); } td.dir-L { color: var(--secondary); } td.dir-local { color: var(--muted); }
+.note { color: var(--muted); font-size: 11px; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .banner, .shift span { transition: none; } .shift.limit span { animation: none; } }
+
+/* Racing telemetry cockpit */
+:root[data-linker="racing"] {
+  --bg:#0e1118; --header:#171b24; --panel:#202530; --field:#131821; --border:#353d4b;
+  --text:#f5f6fa; --muted:#a5aebe; --accent:#ffce35; --accent-text:#1c1808;
+  --selected:#343020; --hover:#2a3140; --secondary:#ab82ff; --success:#39e19a;
+  --warning:#ffae4d; --danger:#ff4e72; --card-a:#222833; --card-b:#171c25;
+  --edge-top:#414a5b; --edge-bot:#090c12; --head-a:#202631; --head-b:#12161e;
+  --radius:12px; --btn-radius:6px; --arc-1:#38d7ef; --arc-2:#39e19a; --arc-3:#ff4e72;
+  --led-1:#42ee92; --led-2:#ffcc39; --led-3:#ff4e72; --led-off:#272e37;
+  --display: "Titillium Web", "Arial", sans-serif; --display-style:italic; --display-weight:900;
+  color-scheme:dark;
+}
+.circuit-panel { position:relative; overflow:hidden; }
+.circuit-map { display:block; width:100%; height:340px; }
+.circuit-footer { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:12px; }
+.circuit-status { color:var(--accent); }
+:root[data-linker="racing"] .grid { grid-template-columns:minmax(0,1.25fr) minmax(0,.8fr) minmax(0,1fr); }
+:root[data-linker="racing"] .card { box-shadow:0 10px 24px #0003; }
+:root[data-linker="racing"] .metric { border-left:0; border-top:3px solid var(--tone); padding:17px; }
+:root[data-linker="racing"] .metric .val { font-size:34px; color:#fff; }
+:root[data-linker="racing"] .metric[data-k="speed"] { --tone:#28bdf0; background:linear-gradient(115deg,#183b54,#172330); }
+:root[data-linker="racing"] .metric[data-k="rpm"] { --tone:#bd7bff; background:linear-gradient(115deg,#46305f,#241e35); }
+:root[data-linker="racing"] .metric[data-k="hazard"] { --tone:#ff9b3c; background:linear-gradient(115deg,#693919,#2c211c); }
+:root[data-linker="racing"] .metric[data-k="lead"] { --tone:#30ddae; background:linear-gradient(115deg,#14523f,#192b27); }
+:root[data-linker="racing"] .cockpit-card {
+  border-radius:30px 30px 18px 18px; border:1px solid #49505d;
+  background:repeating-linear-gradient(132deg,#ffffff04 0 3px,#00000009 3px 9px),
+             radial-gradient(ellipse at 50% 0,#343b48,#12161e 75%);
+  box-shadow:inset 0 2px 1px #ffffff15,0 12px 30px #0008;
+}
+:root[data-linker="racing"] .cockpit-card .shift { gap:5px; padding:12px 16px; margin:0 auto 12px; border-radius:50% 50% 8px 8px; background:#080b10; border:1px solid #444b58; }
+:root[data-linker="racing"] .shift span { height:12px; border-radius:50%; }
+:root[data-linker="racing"] .cockpit-card .gauge { aspect-ratio:auto; height:228px; max-width:100%; }
+:root[data-linker="racing"] #speedo { opacity:.22; position:absolute; width:210px; height:210px; right:0; top:0; }
+:root[data-linker="racing"] .cockpit-card .center {
+  inset:0 8px 12px; border-radius:12px; border:1px solid #3d4759;
+  background:linear-gradient(180deg,#090d14ef,#111927e8);
+  display:grid; grid-template-columns:1fr 1fr; padding:18px 22px;
+}
+:root[data-linker="racing"] .speed-val { font-size:62px; align-self:end; }
+:root[data-linker="racing"] .speed-unit { grid-column:1; align-self:start; }
+:root[data-linker="racing"] .rpm-meta { display:contents; }
+:root[data-linker="racing"] .rpm-meta > div:first-child { grid-column:1; grid-row:3; text-align:left; }
+:root[data-linker="racing"] .rpm-meta > div:nth-child(2) { grid-column:2; grid-row:1 / 4; display:flex; flex-direction:column-reverse; align-items:center; }
+:root[data-linker="racing"] #g-gear { font-size:112px; line-height:1; color:#ffdf55; text-shadow:0 0 25px #ffd12c33; }
+:root[data-linker="racing"] .rpm-meta > div:last-child { display:none; }
+:root[data-linker="racing"] .tiles { gap:8px; }
+:root[data-linker="racing"] .bar { height:8px; }
+:root[data-linker="racing"] .banner { border-left:4px solid var(--accent); text-align:left; font-size:16px; }
+@media(max-width:1200px) {
+  :root[data-linker="racing"] .grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+}
+@media(max-width:760px) {
+  :root[data-linker="racing"] .grid { grid-template-columns:minmax(0,1fr); }
+  .circuit-map { height:290px; }
+}
+
+
+.desktop-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px; }
+.desktop-form { display:flex;gap:8px;flex-wrap:wrap;margin:10px 0; }
+.desktop-form input,.desktop-form select,.desktop-form button {
+ font:inherit; padding:7px 9px; border:1px solid var(--border);border-radius:6px;background:var(--field);color:var(--text);min-width:0;
+}
+.desktop-form input { flex:1; }
+.desktop-form button { cursor:pointer;background:var(--selected); }
+.shared-video { background:#000;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:8px; }
+.shared-video img { width:100%;height:100%;object-fit:contain;position:absolute; }
+.shared-video span { color:#a8b3c4; }
+.mav-table { width:100%;border-collapse:collapse;font-size:12px; }
+.mav-table td,.mav-table th { text-align:left;padding:7px;border-bottom:1px solid var(--border); }
+@media(max-width:760px){.desktop-grid{grid-template-columns:minmax(0,1fr)}}
+.workspace-tabs { display:flex; gap:8px; flex:none; overflow-x:auto; }
+.workspace-tabs button { flex:1; min-width:100px; border:1px solid var(--border); border-radius:var(--btn-radius); padding:9px 14px; color:var(--muted); background:var(--panel); font:700 13px var(--font); cursor:pointer; }
+.workspace-tabs button[aria-selected="true"] { color:var(--accent-text); background:var(--accent); border-color:var(--accent); }
+.tab-pane { flex:1; min-height:0; display:none; overflow:hidden; overscroll-behavior:contain; }
+.tab-pane.active { display:flex; flex-direction:column; gap:10px; }
+.tab-pane > .desktop-grid { flex:1; min-height:0; }
+.tab-pane > .desktop-grid > .card { min-height:240px; }
+.drive-pane .grid { display:grid; flex:1; width:100%; min-width:0; min-height:0; grid-template-columns:repeat(4,minmax(0,1fr)); grid-template-rows:minmax(0,1fr); grid-auto-flow:row; align-items:stretch; overflow:hidden; }
+.drive-pane .grid > .col { grid-column:auto; grid-row:auto; width:auto; }
+.drive-pane .col { min-width:0; min-height:0; overflow:hidden; gap:8px; }
+.drive-pane .cockpit-card { flex:1; min-height:0; }
+.drive-pane .pair { flex:1; min-height:0; }
+.drive-pane .pair > .card { min-height:0; }
+.drive-pane .col > .card,.drive-pane .col-c-inner > .card { flex:1; min-height:0; }
+.drive-pane .col-c-inner { flex:1; min-height:0; grid-template-rows:repeat(2,minmax(0,1fr)); overflow:hidden; }
+.drive-pane .circuit-map { height:clamp(130px,25vh,270px); }
+.drive-pane .course { height:clamp(120px,22vh,235px); }
+.drive-pane .gauge { width:min(100%, 30vh); max-height:32vh; }
+.drive-pane .metrics .card { padding:10px; }
+.drive-pane .metric .val { font-size:clamp(19px,2vw,27px); }
+.drive-pane .grid { grid-template-columns:minmax(0,1.15fr) repeat(3,minmax(0,1fr)); }
+.drive-pane .drive-video-slot { display:flex; min-width:0; min-height:0; }
+.drive-pane .drive-video-slot > .card { flex:1; min-height:0; }
+.drive-pane .shared-video { height:clamp(150px,28vh,360px); aspect-ratio:auto; }
+.drive-pane .shared-video img { inset:0; }
+.resizer-hint { margin-left:auto; color:var(--muted); font-size:11px; align-self:center; white-space:nowrap; }
+@media(max-width:760px){
+  .wrap { gap:7px; }
+  .hdr { padding-top:7px; padding-bottom:calc(7px + var(--stripe-h)); }
+  .banner { padding:7px 10px; }
+  .tab-pane > .desktop-grid { grid-template-columns:minmax(0,1fr); }
+  .tab-pane > .desktop-grid > .card { min-height:180px; }
+  :root[data-linker] .drive-pane .grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .drive-pane .col { gap:5px; }
+  .drive-pane .col-c { grid-column:auto; }
+  .drive-pane .pair { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .drive-pane .card { padding:7px; }
+  .drive-pane .shared-video { height:18vh; min-height:90px; }
+  .drive-pane .circuit-map,.drive-pane .course { height:18vh; }
+  .drive-pane .gauge { width:min(100%,24vh); max-height:24vh; }
+  .drive-pane .card-head { margin-bottom:4px; }
+  .drive-pane .legend { display:none; }
+  .drive-pane .cockpit-card .shift { margin-bottom:4px; }
+  .drive-pane .cockpit-card .center { padding:8px; }
+  .drive-pane .cockpit-card #g-gear { font-size:clamp(38px,8vw,72px); }
+  .resizer-hint { display:none; }
+}
+@media(min-width:761px) and (max-width:1200px){
+  :root[data-linker] .drive-pane .grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .drive-pane .col-c { grid-column:auto; }
+  .drive-pane .shared-video { height:24vh; }
+}
+/* Explicit track layout overrides the legacy theme grid rules. */
+.drive-pane #drive-grid { display:flex !important; flex-flow:row nowrap; align-items:stretch; width:100%; }
+.drive-pane #drive-grid > .col { flex:1 1 0; width:0; max-width:none; }
+@media(max-width:1200px){
+  .drive-pane #drive-grid { flex-wrap:wrap; align-content:stretch; }
+  .drive-pane #drive-grid > .col { flex:1 1 calc(50% - 6px); height:calc(50% - 6px); }
+}
+.drive-pane #drive-grid.edit-grid { display:grid !important; grid-template-columns:repeat(12,minmax(0,1fr)) !important; grid-template-rows:repeat(8,minmax(0,1fr)) !important; gap:6px; position:relative; }
+.edit-grid > .card { width:auto; height:auto; min-width:0; min-height:0; resize:none; position:relative; padding:10px; }
+.panel-move { cursor:move; touch-action:none; user-select:none; }
+.panel-grip { position:absolute; bottom:0; right:0; width:28px; height:28px; cursor:nwse-resize; touch-action:none; z-index:3; color:var(--accent); background:var(--panel); border:1px solid var(--border); border-radius:8px 0 0 0; }
+.panel-grip::after { content:'◢'; position:absolute; bottom:1px; right:3px; }
+.edit-grid .gauge { width:min(100%, 18vh); max-height:18vh; }
+.edit-grid .circuit-map,.edit-grid .course { height:calc(100% - 55px); min-height:70px; }
+.edit-grid .shared-video { height:calc(100% - 105px); min-height:70px; }
+.edit-grid .cockpit-card .gauge { height:min(18vh, 160px); }
+.edit-grid .cockpit-card #g-gear { font-size:clamp(32px,5vh,72px); }
+.edit-grid .cockpit-card .shift { margin-bottom:4px; padding:5px; }
+.field-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.field-grid label { display:flex; align-items:center; gap:7px; padding:7px; background:var(--field); border-radius:6px; }
+.custom-values { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.custom-values div { background:var(--field); border-radius:6px; padding:6px; }
+.custom-values strong { display:block; font-size:16px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="spdGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" style="stop-color: var(--arc-1)"/>
+      <stop offset="0.6" style="stop-color: var(--arc-2)"/>
+      <stop offset="1" style="stop-color: var(--arc-3)"/>
+    </linearGradient>
+    <radialGradient id="discGrad" cx="50%" cy="35%" r="70%">
+      <stop offset="0" style="stop-color: var(--hover)"/>
+      <stop offset="1" style="stop-color: var(--field)"/>
+    </radialGradient>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="hdr">
+    <div class="brand">
+      <svg viewBox="0 0 28 28" aria-hidden="true">
+        <rect x="1" y="1" width="26" height="26" rx="8" style="fill: var(--selected); stroke: var(--accent)" stroke-width="1.2"/>
+        <path d="M7 17 L10 11 H18 L21 17 Z" fill="none" style="stroke: var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>
+        <circle cx="10" cy="18.5" r="2" style="fill: var(--accent)"/><circle cx="18" cy="18.5" r="2" style="fill: var(--accent)"/>
+        <circle cx="14" cy="6" r="1.6" style="fill: var(--secondary)"/>
+      </svg>
+      <b>Linker</b>
+    </div>
+    <div class="nav" aria-label="현재 화면"><span>Drive / Telemetry</span></div>
+    <div class="badges">
+      <span class="badge" id="b-src" data-tone="accent"><i></i>시뮬레이션</span>
+      <span class="badge" id="b-veh" data-tone="accent"><i></i>SYS 2 · 포뮬러 #07</span>
+      <span class="badge" id="b-link" data-tone="success"><i></i>링크 2/2 · 서명</span>
+      <span class="badge" id="b-sync" data-tone="success"><i></i>동기화 완료</span>
+      <span class="badge" id="b-mode" data-tone="success"><i></i>NORMAL</span>
+      <label for="appearance" class="caption" style="margin-left:4px">테마</label>
+      <select id="appearance">
+        <option value="racing">Racing Cockpit</option>
+        <option value="f1">F1 Racing</option>
+        <option value="neo">Neo</option>
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="cyber">Cyber</option>
+        <option value="simple">심플</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="banner num" id="banner" data-level="0" role="status" aria-live="polite">장애물 없음 · NORMAL · 계획 주행선 유지</div>
+
+
+  <nav class="workspace-tabs" role="tablist" aria-label="Drive 대시보드 패널">
+    <button type="button" role="tab" id="tab-drive" aria-controls="pane-drive" aria-selected="true">주행 대시보드</button>
+    <button type="button" role="tab" id="tab-mavlink" aria-controls="pane-mavlink" aria-selected="false">MAVLink</button>
+    <span class="resizer-hint">패널 오른쪽 아래를 끌어 크기 조절</span>
+  </nav>
+  <section class="tab-pane drive-pane active" id="pane-drive" role="tabpanel" aria-labelledby="tab-drive">
+  <section class="metrics">
+    <div class="card metric" data-k="speed"><div class="caption">속도</div><div class="val num"><span id="m-speed">0</span><small>km/h</small></div><div class="sub num"><span id="m-ms">0.0</span> m/s · CAR_STATE 20 Hz</div></div>
+    <div class="card metric" data-k="rpm"><div class="caption">엔진 회전수</div><div class="val num"><span id="m-rpm">0</span><small>rpm</small></div><div class="sub num" id="m-rpm-sub">1단 · 레드라인 13,500</div></div>
+    <div class="card metric" data-k="hazard"><div class="caption">최근접 장애물</div><div class="val num"><span id="m-haz">—</span><small>m</small></div><div class="sub num" id="m-haz-sub">TTA — · 경보 없음</div></div>
+    <div class="card metric" data-k="lead"><div class="caption">Sentinel 선행</div><div class="val num"><span id="m-lead">—</span><small>m 앞</small></div><div class="sub num" id="m-lead-sub">SYS 1 · DRONE_STATE 대기</div></div>
+  </section>
+  <div class="grid" id="drive-grid">
+    <div class="col">
+      <div class="card cockpit-card">
+        <div class="card-head"><span class="title">주행 계기판</span><span class="caption num" id="spd-cap">목표 — km/h</span></div>
+        <div class="shift" id="shift" aria-label="시프트 라이트"></div>
+        <div class="gauge" role="img" aria-label="속도계와 RPM 링"><svg viewBox="0 0 240 240" id="speedo"></svg><div class="center"><div class="speed-val num" id="g-speed">0</div><div class="speed-unit">km/h</div><div class="rpm-meta"><div><div class="k">RPM</div><div class="v sec num" id="g-rpm">—</div></div><div><div class="k">기어</div><div class="v acc num" id="g-gear">—</div></div><div><div class="k">m/s</div><div class="v num" id="g-ms">0.0</div></div></div></div></div>
+      </div>
+      <div class="pair">
+        <div class="card"><div class="card-head"><span class="title">방향계</span><span class="caption num" id="hdg-rate">0°/s</span></div><div class="gauge" role="img" aria-label="방향계"><svg viewBox="0 0 240 240" id="compass"></svg><div class="center"><div class="hdg-val num"><span id="g-hdg">---</span>°</div><div class="hdg-card" id="g-card">—</div></div></div><div class="legend"><span><i style="background:var(--accent)"></i>차량 진행</span><span><i style="background:var(--warning)"></i>코스 목표 방위</span><span><i style="background:var(--success)"></i>Sentinel</span></div></div>
+        <div class="card"><div class="card-head"><span class="title">구동 · 차체</span><span class="caption" id="tele-cap">CAR_STATE</span></div><div class="tiles"><div class="tile"><div class="k">스로틀</div><div class="v num"><span id="t-thr">—</span>%</div><div class="bar"><span id="b-thr" style="width:0%"></span></div></div><div class="tile"><div class="k">브레이크</div><div class="v num"><span id="t-brk">—</span>%</div><div class="bar brk"><span id="b-brk" style="width:0%"></span></div></div><div class="tile"><div class="k">ERS 배터리</div><div class="v num"><span id="t-ers">—</span>%</div><div class="bar ers"><span id="b-ers" style="width:0%"></span></div></div><div class="tile"><div class="k">횡가속</div><div class="v num"><span id="t-g">0.0</span> g</div><div class="bar g"><span id="b-g" style="width:0%"></span></div></div><div class="tile"><div class="k">코스 위치</div><div class="v num"><span id="t-s">—</span> m</div><div class="caption">track_s_m</div></div><div class="tile"><div class="k">횡 오프셋</div><div class="v num"><span id="t-lat">0.0</span> m</div><div class="caption">음수 = 코스 좌측</div></div></div></div>
+      </div>
+    </div>
+    <div class="col"><div class="card circuit-panel"><div class="card-head"><span class="title">서킷맵</span><span class="caption circuit-status" id="circuit-source">코스 대기</span></div><svg class="circuit-map" viewBox="0 0 420 350" id="circuit-map" role="img" aria-label="전체 코스와 차량 위치"></svg><div class="circuit-footer"><span id="circuit-length">— m</span><span id="circuit-progress">차량 위치 대기</span></div><div class="legend"><span><i style="background:var(--accent)"></i>차량</span><span><i style="background:var(--success)"></i>Sentinel 예상 코스 위치</span></div></div><div class="card"><div class="card-head"><span class="title">코스 뷰</span><span class="caption" id="course-cap">전방 160 m · 폭 12 m</span></div><svg class="course" viewBox="0 0 200 320" id="course" role="img" aria-label="전방 코스와 장애물 위치"></svg><div class="legend"><span><i style="background:var(--lv1-bg)"></i>CAUTION</span><span><i style="background:var(--lv2-bg)"></i>WARNING</span><span><i style="background:var(--lv3-bg)"></i>CRITICAL</span><span><i style="background:var(--accent)"></i>계획 주행선</span></div></div></div>
+    <div class="col col-c"><div class="col-c-inner"><div class="card"><div class="card-head"><span class="title">장애물 경보</span><span class="caption">OBSTACLE_ALERT · 52203</span></div><div class="list" id="alerts"></div></div><div class="card"><div class="card-head"><span class="title">프로토콜 v2 수신</span><span class="caption num" id="lat-cap">지연 — ms</span></div><div class="rates"><div class="rate"><div class="k">GUIDE_HEARTBEAT</div><div class="v num" id="r-hb">—</div></div><div class="rate"><div class="k">DRONE_STATE</div><div class="v num" id="r-ds">—</div></div><div class="rate"><div class="k">CAR_STATE 송신</div><div class="v num" id="r-cs">—</div></div></div><div class="log-wrap"><table class="log"><thead><tr><th>UTC</th><th>방향</th><th>메시지</th><th>seq</th><th>내용</th></tr></thead><tbody id="log"></tbody></table></div><div class="note" id="note">시뮬레이션 데이터입니다.</div></div></div></div>
+    <div class="col drive-video-slot" id="drive-video-slot"><div class="card" id="video-card">
+      <div class="card-head"><span class="title">영상 공유</span><span class="caption">Linker 수신 영상</span></div>
+      <div class="shared-video"><span id="shared-video-state">수신 영상 대기</span><img id="shared-video" alt="Linker 공유 영상" hidden></div>
+      <div class="desktop-form">
+        <select id="shared-source" aria-label="공유 영상 채널"><option value="fly">Fly 영상</option><option value="ch1">Video CH1</option><option value="ch2">Video CH2</option><option value="ch3">Video CH3</option><option value="ch4">Video CH4</option><option value="off">공유 끄기</option></select>
+        <button type="button" id="shared-apply">채널 적용</button>
+      </div>
+      <div class="caption">Fly 또는 Video 4CH에서 영상을 열면 이 화면에도 표시됩니다.</div>
+    </div></div>
+  </div>
+  </section>
+  <section class="tab-pane" id="pane-mavlink" role="tabpanel" aria-labelledby="tab-mavlink">
+  <section class="desktop-grid" aria-label="MAVLink 설정">
+    <div class="card" id="mav-card">
+      <div class="card-head"><span class="title">MAVLink 연결 · 송수신</span><span class="caption" id="desktop-state">Linker 연결 대기</span></div>
+      <form class="desktop-form" id="mav-connect">
+        <select id="mav-kind" aria-label="연결 종류"><option value="udp">UDP 수신</option><option value="udpout">UDP 송신</option><option value="tcp">TCP</option><option value="serial">Serial</option><option value="bluetooth">Bluetooth</option></select>
+        <input id="mav-address" value="0.0.0.0:14550" aria-label="연결 주소 또는 장치 경로" required>
+        <input id="mav-baud" type="number" value="115200" min="1200" max="4000000" aria-label="시리얼 전송 속도">
+        <button type="submit">링크 추가</button>
+      </form>
+      <div class="caption" id="mav-links">기존 Linker 연결을 공유합니다.</div>
+      <div class="desktop-form">
+        <select id="mav-vehicle" aria-label="조종 대상 기체"><option value="">기체 대기</option></select>
+        <button type="button" id="mav-select">기체 선택</button>
+        <button type="button" id="mav-streams">스트림 요청</button>
+      </div>
+      <form class="desktop-form" id="mav-request">
+        <input id="mav-message" type="number" min="0" max="16777215" value="30" aria-label="요청할 MAVLink 메시지 ID">
+        <button type="submit">메시지 요청 송신</button>
+      </form>
+      <div class="caption" id="mav-result" role="status">Linker 앱에서 열면 사용할 수 있습니다.</div>
+      <div class="log-wrap"><table class="mav-table"><thead><tr><th>기체</th><th>상태</th><th>속도</th><th>고도</th><th>배터리</th><th>GPS</th></tr></thead><tbody id="mav-telemetry"></tbody></table></div>
+    </div>
+    <div class="card" id="dashboard-settings">
+      <div class="card-head"><span class="title">대시보드 상태 · 차량 정보</span></div>
+      <p class="caption">선택한 정보가 주행 대시보드의 차량 정보 패널에 표시됩니다.</p>
+      <div class="field-grid" id="dashboard-fields"></div>
+      <div class="desktop-form"><button type="button" id="reset-layout">패널 배치 초기화</button></div>
+      <p class="caption">주행 화면에서 패널 제목을 끌어 이동하고 오른쪽 아래를 끌어 크기를 조절하세요.</p>
+    </div>
+
+  </section>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const STYLED = { fill: 1, stroke: 1, opacity: 1 };
+  const el = (tag, attrs, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) {
+      const v = attrs[k];
+      if (STYLED[k] && typeof v === 'string' && v.indexOf('var(') >= 0) n.style.setProperty(k, v);
+      else n.setAttribute(k, v);
+    }
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const setPaint = (n, k, v) => n.style.setProperty(k, v);
+
+  /* ---------- Appearance (gui_theme presets + F1) ---------- */
+  const root = document.documentElement;
+  const sel = $('appearance');
+  const THEMES = ['racing', 'f1', 'neo', 'dark', 'light', 'cyber', 'simple'];
+  const LIGHT = { light: true, simple: true };
+  const KEY = 'linker.drive.appearance';
+  function applyTheme(name, persist) {
+    root.setAttribute('data-linker', name);
+    root.setAttribute('data-theme', LIGHT[name] ? 'light' : 'dark');
+    sel.value = name;
+    if (persist) { try { localStorage.setItem(KEY, name); } catch (e) {} }
+  }
+  let saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  applyTheme(THEMES.indexOf(saved) >= 0 ? saved : 'racing', false);
+  sel.addEventListener('change', () => applyTheme(sel.value, true));
+
+  const tabs = ['tab-drive', 'tab-mavlink'].map(id => ({id, button:$(id)}));
+  const panelForTab = { 'tab-drive':'pane-drive', 'tab-mavlink':'pane-mavlink' };
+  function activateTab(id, persist = true) {
+    const tab = tabs.find(item => item.id === id) || tabs[0];
+    tabs.forEach(item => {
+      const selected = item === tab;
+      item.button.setAttribute('aria-selected', String(selected));
+      $(panelForTab[item.id]).classList.toggle('active', selected);
+      $(panelForTab[item.id]).setAttribute('aria-hidden', String(!selected));
+      item.button.tabIndex = selected ? 0 : -1;
+    });
+    if (persist) { try { localStorage.setItem('linker.drive.tab', tab.id); } catch (e) {} }
+  }
+  tabs.forEach((tab, index) => {
+    tab.button.addEventListener('click', () => activateTab(tab.id));
+    tab.button.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      const next = (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      tabs[next].button.focus(); activateTab(tabs[next].id);
+    });
+  });
+  let savedTab = null;
+  try { savedTab = localStorage.getItem('linker.drive.tab'); } catch (e) {}
+  activateTab(savedTab === 'tab-mavlink' ? savedTab : 'tab-drive', false);
+
+  /* Dashboard panels use a bounded 12 × 6 layout, saved in this browser. */
+  const grid = $('drive-grid');
+  const columns = Array.from(grid.children);
+  const metricSection = document.querySelector('#pane-drive .metrics');
+  const panels = [...metricSection.children,
+    columns[0].children[0], columns[0].children[1].children[0], columns[0].children[1].children[1],
+    columns[1].children[0], columns[1].children[1],
+    columns[2].children[0].children[0], columns[2].children[0].children[1],
+    $('video-card')
+  ];
+  const info = document.createElement('div');
+  info.className = 'card';
+  info.innerHTML = '<div class="card-head"><span class="title">차량 정보</span><span class="caption">선택 기체</span></div><div class="custom-values" id="custom-values"></div>';
+  panels.push(info);
+  grid.classList.add('edit-grid');
+  panels.forEach(panel => grid.appendChild(panel));
+  columns.forEach(column => column.remove()); metricSection.remove();
+  const defaults = [[1,1,3,1],[4,1,3,1],[7,1,3,1],[10,1,3,1],[1,2,3,3],[1,5,1,4],[2,5,2,4],[4,2,3,3],[4,5,3,4],[7,2,2,3],[7,5,2,4],[9,2,4,4],[9,6,4,3]];
+  const layoutKey = 'linker.drive.layout.v2';
+  let layout;
+  try { layout = JSON.parse(localStorage.getItem(layoutKey)); } catch (e) {}
+  if (!Array.isArray(layout) || layout.length !== panels.length) layout = defaults.map(x => x.slice());
+  function paintLayout() {
+    panels.forEach((panel,i) => {
+      let v = layout[i];
+      if (!Array.isArray(v) || v.length !== 4 || v.some(n => !Number.isInteger(n)) || v[0]<1 || v[1]<1 || v[2]<1 || v[3]<1 || v[0]+v[2]>13 || v[1]+v[3]>9) v = layout[i] = defaults[i].slice();
+      panel.style.gridColumn = v[0]+' / span '+v[2]; panel.style.gridRow = v[1]+' / span '+v[3];
+    });
+  }
+  function saveLayout() { try { localStorage.setItem(layoutKey, JSON.stringify(layout)); } catch (e) {} }
+  let panelZ = 1;
+  panels.forEach((panel,i) => {
+    const head = panel.querySelector('.card-head') || panel.querySelector('.caption');
+    head.classList.add('panel-move'); head.title = '드래그하여 이동';
+    const grip = document.createElement('span'); grip.className = 'panel-grip'; grip.title = '드래그하여 크기 조절'; panel.appendChild(grip);
+    function start(event, resize) {
+      if (event.button !== 0) return;
+      event.preventDefault(); panel.style.zIndex = String(++panelZ);
+      const rect=grid.getBoundingClientRect(), initial=layout[i].slice(), startX=event.clientX, startY=event.clientY;
+      const move = e => {
+        const dx=Math.round((e.clientX-startX)/(rect.width/12)), dy=Math.round((e.clientY-startY)/(rect.height/8));
+        const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+        layout[i]=resize ? [initial[0],initial[1],clamp(initial[2]+dx,1,13-initial[0]),clamp(initial[3]+dy,1,9-initial[1])] :
+          [clamp(initial[0]+dx,1,13-initial[2]),clamp(initial[1]+dy,1,9-initial[3]),initial[2],initial[3]];
+        paintLayout();
+      };
+      const end=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);saveLayout();};
+      window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+    }
+    head.addEventListener('pointerdown',e=>start(e,false)); grip.addEventListener('pointerdown',e=>start(e,true));
+  });
+  paintLayout();
+  $('reset-layout').addEventListener('click',()=>{layout=defaults.map(x=>x.slice());paintLayout();saveLayout();});
+  const fields = {name:'차량 이름',sysid:'시스템 ID',connected:'연결 상태',mode:'주행 모드',armed:'시동',gs:'속도',alt:'고도',heading:'방향',batt_v:'배터리 전압',batt_p:'배터리 잔량',gps:'GPS',lat:'위도',lon:'경도',link:'링크'};
+  const fieldKey='linker.drive.fields.v1';
+  let selectedFields;
+  try { selectedFields=JSON.parse(localStorage.getItem(fieldKey)); } catch(e) {}
+  if (!Array.isArray(selectedFields)) selectedFields=['name','connected','mode','gs','alt','batt_p'];
+  let activeVehicle=null;
+  function renderFields() {
+    const target=$('custom-values'); target.textContent='';
+    selectedFields.filter(key=>fields[key]).forEach(key=>{
+      const item=document.createElement('div'), label=document.createElement('span'), value=document.createElement('strong');
+      label.textContent=fields[key]; let v=activeVehicle && activeVehicle[key];
+      if (v == null) v='—'; else if(key==='connected') v=v?'연결됨':'연결 끊김'; else if(key==='armed') v=v?'시동':'시동 꺼짐';
+      else if(typeof v==='number') v=Number(v).toFixed(key==='lat'||key==='lon'?5:1)+({gs:' m/s',alt:' m',heading:'°',batt_v:' V',batt_p:'%'}[key]||'');
+      value.textContent=v;item.append(label,value);target.appendChild(item);
+    });
+  }
+  Object.entries(fields).forEach(([key,label])=>{
+    const row=document.createElement('label'), box=document.createElement('input'), caption=document.createElement('span');
+    box.type='checkbox';box.checked=selectedFields.includes(key);caption.textContent=label;
+    box.addEventListener('change',()=>{selectedFields=box.checked?[...selectedFields,key]:selectedFields.filter(x=>x!==key);try{localStorage.setItem(fieldKey,JSON.stringify(selectedFields));}catch(e){}renderFields();});
+    row.append(box,caption);$('dashboard-fields').appendChild(row);
+  });
+  renderFields();
+
+
+  const desktopAvailable = location.protocol === 'http:' &&
+      (location.hostname === '127.0.0.1' || location.hostname === 'localhost');
+  const token = '__DASHBOARD_TOKEN__';
+  async function sendDesktop(command) {
+    try {
+      const response = await fetch('/command', {method:'POST',
+        headers:{'Content-Type':'application/json','X-Dashboard-Token':token},body:JSON.stringify(command)});
+      if (!response.ok) throw new Error('요청을 보낼 수 없습니다 ('+response.status+')');
+      $('mav-result').textContent='요청 처리 중…';
+    } catch(error) { $('mav-result').textContent=error.message; }
+  }
+  $('mav-connect').addEventListener('submit',event=>{
+    event.preventDefault();
+    sendDesktop({action:'connect',kind:$('mav-kind').value,address:$('mav-address').value,baud:Number($('mav-baud').value)});
+  });
+  $('mav-select').addEventListener('click',()=>sendDesktop({action:'select',vehicle:$('mav-vehicle').value}));
+  $('mav-streams').addEventListener('click',()=>sendDesktop({action:'streams',vehicle:$('mav-vehicle').value}));
+  $('mav-request').addEventListener('submit',event=>{
+    event.preventDefault();
+    sendDesktop({action:'request',vehicle:$('mav-vehicle').value,message_id:Number($('mav-message').value)});
+  });
+  $('shared-apply').addEventListener('click',()=>sendDesktop({action:'video',source:$('shared-source').value}));
+  let vehicleSignature='', desktopSeen=false, desktopHasVehicle=false, guideLive=false;
+  async function refreshDesktop() {
+    try {
+      if (document.hidden) return;
+      const response=await fetch('/desktop');
+      if(!response.ok) throw new Error('연결 대기');
+      const state=await response.json();
+      if(!state.vehicles) return;
+      desktopSeen=true;
+      $('desktop-state').textContent='Linker 연결됨';
+      $('mav-links').textContent=state.links.map(link=>link.name+' · '+link.state+' · RX '+link.rx).join(' / ') || '등록된 MAVLink 링크 없음';
+      $('mav-result').textContent=state.result;
+      const signature=JSON.stringify(state.vehicles.map(v=>[v.key,v.name]));
+      if(signature!==vehicleSignature){
+        const selected=$('mav-vehicle').value || state.active;
+        $('mav-vehicle').textContent='';
+        state.vehicles.forEach(v=>{
+          const option=document.createElement('option');option.value=v.key;option.textContent=v.name+' · '+v.link;$('mav-vehicle').appendChild(option);
+        });
+        $('mav-vehicle').value=selected;
+        if(!$('mav-vehicle').value && state.vehicles.length) $('mav-vehicle').value=state.vehicles[0].key;
+        vehicleSignature=signature;
+      }
+      const active=state.vehicles.find(v=>v.key===state.active);
+      activeVehicle=active || null; renderFields();
+      desktopHasVehicle=!!(active && active.connected);
+      if(!guideLive && desktopHasVehicle){
+        simOn=false;
+        const view=idleView('live');
+        Object.assign(view,{car:true,speedValid:active.gs != null,vehicle:active.name,speed_mps:active.gs ?? 0,heading:active.heading,
+          mode:active.mode || null,link:{ok:state.links.filter(l=>l.state==='open').length,total:state.links.length,synced:false,epoch:0,degraded:false},
+          note:'MAVLink 실시간 · 선택 기체 데이터 · Guide 경보 수신 대기'});
+        render(view);
+      }
+      if(!guideLive && !desktopHasVehicle && !simOn) { lastView=idleView('wait');render(lastView); }
+      const body=$('mav-telemetry');body.textContent='';
+      const number=(value,unit)=>value==null?'—':Number(value).toFixed(1)+unit;
+      state.vehicles.forEach(v=>{
+        const row=document.createElement('tr');
+        [v.name,v.connected?v.mode:'연결 끊김',number(v.gs,' m/s'),number(v.alt,' m'),number(v.batt_v,' V'),v.gps].forEach(value=>{
+          const cell=document.createElement('td');cell.textContent=value;row.appendChild(cell);
+        });body.appendChild(row);
+      });
+    }catch(error){$('desktop-state').textContent='Linker 연결 확인 필요';}
+    finally {setTimeout(refreshDesktop,500);}
+  }
+  async function refreshVideo() {
+    let objectUrl;
+    try {
+      if(document.hidden || !desktopSeen) return;
+      const response=await fetch('/frame.jpg', {headers:{'X-Dashboard-Token':token}});
+      if(response.status===204){$('shared-video').hidden=true;$('shared-video-state').textContent='선택 채널의 수신 영상 대기';return;}
+      if(!response.ok) throw new Error('영상 연결 확인 필요');
+      objectUrl=URL.createObjectURL(await response.blob());
+      const image=$('shared-video');
+      await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=objectUrl;});
+      image.hidden=false;
+    }catch(error){$('shared-video').hidden=true;$('shared-video-state').textContent='영상 연결 확인 필요';}
+    finally{if(objectUrl)URL.revokeObjectURL(objectUrl);setTimeout(refreshVideo,180);}
+  }
+  if(desktopAvailable){refreshDesktop();refreshVideo();}
+
+  /* ---------- Protocol vocabulary (guide_protocol) ---------- */
+  const KINDS = ['UNKNOWN', 'DEBRIS', 'VEHICLE', 'PERSON', 'ANIMAL', 'SURFACE_HAZARD'];
+  const KIND_KO = ['미상', '파편', '차량', '사람', '동물', '노면 위험'];
+  const SIDES = ['UNKNOWN', 'LEFT', 'RIGHT', 'BOTH', 'NONE'];
+  const SEV = ['INFO', 'CAUTION', 'WARNING', 'CRITICAL'];
+  const STATES = ['NEW', 'UPDATE', 'CLEARED'];
+  const MODE_TONE = { NORMAL: 'success', CAUTION: 'warning', AVOID: 'warning', STOP: 'danger', MANUAL: 'accent', LINK_DEGRADED: 'danger' };
+  const RPM_MAX = 14000, REDLINE = 13500, SHIFT_FROM = 9000;
+
+  /* ---------- Shift lights ---------- */
+  const shift = $('shift');
+  const leds = [];
+  for (let i = 0; i < 15; i++) {
+    const s = document.createElement('span');
+    s.dataset.z = i < 5 ? 1 : i < 10 ? 2 : 3;
+    shift.appendChild(s);
+    leds.push(s);
+  }
+  function drawShift(rpm) {
+    const lit = rpm == null ? 0 : Math.max(0, Math.min(15, Math.ceil((rpm - SHIFT_FROM) / (REDLINE - SHIFT_FROM) * 15)));
+    leds.forEach((l, i) => l.classList.toggle('on', i < lit));
+    shift.classList.toggle('limit', rpm != null && rpm >= REDLINE);
+  }
+
+  /* ---------- Speedometer ---------- */
+  const A0 = 135, SWEEP = 270, C = 120;
+  const pt = (deg, r) => [C + r * Math.cos(deg * Math.PI / 180), C + r * Math.sin(deg * Math.PI / 180)];
+  const arcD = (r, a0, a1) => {
+    const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r);
+    return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  };
+  const niceMax = (kmh) => {
+    for (const m of [40, 60, 80, 100, 120, 160, 200, 240, 300, 360]) if (m >= kmh) return m;
+    return Math.ceil(kmh / 100) * 100;
+  };
+  const majorStep = (max) => {
+    for (const s of [10, 20, 30, 40, 50, 60, 100]) if (max % s === 0 && max / s <= 8) return s;
+    return max / 4;
+  };
+  const sp = $('speedo');
+  let speedMax = 0, spdArc, rpmArc, knob, spdLen, rpmLen;
+  function buildSpeedo(max) {
+    speedMax = max;
+    sp.textContent = '';
+    const major = majorStep(max), minor = major / (major % 6 === 0 ? 6 : 5);
+    const n = Math.round(max / minor);
+    for (let i = 0; i <= n; i++) {
+      const s = i * minor, a = A0 + SWEEP * s / max;
+      const isMajor = Math.abs(s / major - Math.round(s / major)) < 1e-6;
+      const hot = s >= max * 0.83;
+      const [x0, y0] = pt(a, 116), [x1, y1] = pt(a, isMajor ? 106 : 110);
+      el('line', { x1: x0, y1: y0, x2: x1, y2: y1, stroke: hot ? 'var(--accent)' : 'var(--muted)', 'stroke-width': isMajor ? 1.6 : 0.8, 'stroke-linecap': 'round', opacity: isMajor ? 1 : 0.6 }, sp);
+      if (isMajor) {
+        const [lx, ly] = pt(a, 128);
+        const t = el('text', { x: lx, y: ly + 3.5, 'text-anchor': 'middle', fill: 'var(--muted)', 'font-size': '10', 'font-weight': '700' }, sp);
+        t.textContent = Math.round(s);
+      }
+    }
+    el('path', { d: arcD(96, A0, A0 + SWEEP), fill: 'none', stroke: 'var(--field)', 'stroke-width': 12, 'stroke-linecap': 'round' }, sp);
+    spdArc = el('path', { d: arcD(96, A0, A0 + SWEEP), fill: 'none', stroke: 'url(#spdGrad)', 'stroke-width': 12, 'stroke-linecap': 'round' }, sp);
+    el('circle', { cx: C, cy: C, r: 82, fill: 'url(#discGrad)', stroke: 'var(--border)' }, sp);
+    el('path', { d: arcD(74, A0, A0 + SWEEP), fill: 'none', stroke: 'var(--bg)', 'stroke-width': 4, 'stroke-linecap': 'round' }, sp);
+    el('path', { d: arcD(74, A0 + SWEEP * REDLINE / RPM_MAX, A0 + SWEEP), fill: 'none', stroke: 'var(--danger)', 'stroke-width': 4, opacity: 0.6 }, sp);
+    rpmArc = el('path', { d: arcD(74, A0, A0 + SWEEP), fill: 'none', stroke: 'var(--secondary)', 'stroke-width': 4, 'stroke-linecap': 'round' }, sp);
+    knob = el('circle', { r: 8, fill: 'var(--panel)', stroke: 'var(--accent)', 'stroke-width': 3 }, sp);
+    spdLen = spdArc.getTotalLength();
+    rpmLen = rpmArc.getTotalLength();
+    spdArc.setAttribute('stroke-dasharray', spdLen);
+    rpmArc.setAttribute('stroke-dasharray', rpmLen);
+  }
+  function drawSpeed(kmh, rpm) {
+    const f = Math.max(0, Math.min(1, kmh / speedMax));
+    spdArc.setAttribute('stroke-dashoffset', spdLen * (1 - f));
+    rpmArc.setAttribute('stroke-dashoffset', rpm == null ? rpmLen : rpmLen * (1 - Math.min(1, rpm / RPM_MAX)));
+    const [kx, ky] = pt(A0 + SWEEP * f, 96);
+    knob.setAttribute('cx', kx);
+    knob.setAttribute('cy', ky);
+    setPaint(rpmArc, 'stroke', rpm != null && rpm >= REDLINE ? 'var(--danger)' : 'var(--secondary)');
+    drawShift(rpm);
+  }
+
+  /* ---------- Compass ---------- */
+  const cp = $('compass');
+  el('circle', { cx: C, cy: C, r: 112, fill: 'none', stroke: 'var(--border)' }, cp);
+  el('circle', { cx: C, cy: C, r: 86, fill: 'url(#discGrad)', stroke: 'var(--border)' }, cp);
+  const rose = el('g', {}, cp);
+  for (let d = 0; d < 360; d += 5) {
+    const major = d % 30 === 0, a = d - 90;
+    const [x0, y0] = pt(a, 110), [x1, y1] = pt(a, major ? 99 : d % 10 === 0 ? 103 : 106);
+    el('line', { x1: x0, y1: y0, x2: x1, y2: y1, stroke: d === 0 ? 'var(--accent)' : 'var(--muted)', 'stroke-width': major ? 1.6 : 0.7, opacity: major ? 1 : 0.55 }, rose);
+  }
+  const roseLabels = [['N', 0], ['E', 90], ['S', 180], ['W', 270]].map(([n, d]) => {
+    const [x, y] = pt(d - 90, 92);
+    const t = el('text', { x, y: y + 4.5, 'text-anchor': 'middle', 'font-size': '12', 'font-weight': '700', fill: n === 'N' ? 'var(--accent)' : 'var(--muted)' }, rose);
+    t.textContent = n;
+    return [t, x, y];
+  });
+  const tgtMark = el('polygon', { points: '120,10 114,0 126,0', fill: 'var(--warning)' }, cp);
+  const drnMark = el('circle', { cx: 120, cy: 14, r: 4.5, fill: 'var(--success)', stroke: 'var(--panel)', 'stroke-width': 1.5 }, cp);
+  el('polygon', { points: '120,40 114,52 126,52', fill: 'var(--accent)' }, cp);
+  const CARD = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  function drawHeading(h, target, drone) {
+    if (h == null) {
+      $('g-hdg').textContent = '---';
+      $('g-card').textContent = '—';
+      h = 0;
+    } else {
+      $('g-hdg').textContent = String(Math.round(h) % 360).padStart(3, '0');
+      $('g-card').textContent = CARD[Math.round(h / 22.5) % 16];
+    }
+    rose.setAttribute('transform', `rotate(${-h} ${C} ${C})`);
+    for (const [t, x, y] of roseLabels) t.setAttribute('transform', `rotate(${h} ${x} ${y})`);
+    tgtMark.setAttribute('visibility', target == null ? 'hidden' : 'visible');
+    drnMark.setAttribute('visibility', drone == null ? 'hidden' : 'visible');
+    if (target != null) tgtMark.setAttribute('transform', `rotate(${target - h} ${C} ${C})`);
+    if (drone != null) drnMark.setAttribute('transform', `rotate(${drone - h} ${C} ${C})`);
+  }
+
+  /* ---------- Course view ---------- */
+  const cv = $('course');
+  const X0 = 100, Y_EGO = 290, Y_TOP = 20, TRACK_PX = 84;
+  let cvRange = 0, cvWidth = 0, pxM = 7, cvParts = null;
+  const yOf = (m) => Y_EGO - (m / cvRange) * (Y_EGO - Y_TOP);
+  const xOf = (lat) => X0 + lat * pxM;
+  function buildCourse(range, width) {
+    cvRange = range; cvWidth = width; pxM = TRACK_PX / width;
+    cv.textContent = '';
+    const half = width / 2;
+    el('rect', { x: xOf(-half), y: 0, width: TRACK_PX, height: 320, fill: 'var(--field)', rx: 6 }, cv);
+    el('line', { x1: xOf(-half), y1: 0, x2: xOf(-half), y2: 320, stroke: 'var(--muted)', 'stroke-width': 1.2 }, cv);
+    el('line', { x1: xOf(half), y1: 0, x2: xOf(half), y2: 320, stroke: 'var(--muted)', 'stroke-width': 1.2 }, cv);
+    for (let i = 1; i <= 4; i++) {
+      const m = range * i / 4;
+      el('line', { x1: xOf(-half) - 6, y1: yOf(m), x2: xOf(-half), y2: yOf(m), stroke: 'var(--muted)' }, cv);
+      const t = el('text', { x: xOf(-half) - 9, y: yOf(m) + 3, 'text-anchor': 'end', 'font-size': '9', fill: 'var(--muted)' }, cv);
+      t.textContent = Math.round(m) + ' m';
+    }
+    const fov = el('polygon', { fill: 'var(--success)', opacity: 0.08 }, cv);
+    const plan = el('path', { fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5, 'stroke-dasharray': '6 4', 'stroke-linecap': 'round' }, cv);
+    const obs = el('g', {}, cv);
+    const drone = el('g', {}, cv);
+    el('circle', { r: 7, fill: 'none', stroke: 'var(--success)', 'stroke-width': 1.5 }, drone);
+    el('circle', { r: 2.5, fill: 'var(--success)' }, drone);
+    [[-6, -6], [6, -6], [-6, 6], [6, 6]].forEach(([dx, dy]) => el('circle', { cx: dx, cy: dy, r: 3, fill: 'none', stroke: 'var(--success)', 'stroke-width': 1 }, drone));
+    el('text', { x: 11, y: 3, 'font-size': '9', 'font-weight': '700', fill: 'var(--success)' }, drone).textContent = 'Sentinel';
+    const ego = el('g', {}, cv);
+    el('rect', { x: -5, y: -11, width: 10, height: 22, rx: 4, fill: 'var(--accent)' }, ego);
+    [[-9, -10, 6], [5, -10, 6], [-9, 4, 7], [5, 4, 7]].forEach(([x, y, h]) => el('rect', { x, y, width: 4, height: h, rx: 1, fill: 'var(--text)' }, ego));
+    cvParts = { fov, plan, obs, drone, ego };
+    $('course-cap').textContent = `전방 ${Math.round(range)} m · 폭 ${width} m`;
+  }
+  function drawCourse(v) {
+    const { fov, plan, obs, drone, ego } = cvParts;
+    const half = cvWidth / 2;
+    const ex = xOf(v.lat);
+    ego.setAttribute('transform', `translate(${ex} ${Y_EGO})`);
+    if (v.drone && v.drone.lead != null) {
+      const dy = yOf(Math.min(v.drone.lead, cvRange * 0.94));
+      drone.setAttribute('visibility', 'visible');
+      drone.setAttribute('transform', `translate(${X0} ${dy})`);
+      fov.setAttribute('points', `${X0},${dy} ${xOf(-half)},${Math.min(Y_EGO, dy + 120)} ${xOf(half)},${Math.min(Y_EGO, dy + 120)}`);
+    } else {
+      drone.setAttribute('visibility', 'hidden');
+      fov.setAttribute('points', '');
+    }
+    const h = v.hazard, rem = h ? h.remaining : null;
+    let d = `M ${ex} ${Y_EGO - 12}`;
+    if (v.mode === 'AVOID' && rem != null) {
+      const ox = xOf(v.offset);
+      const ya = yOf(Math.max(cvRange * 0.03, rem - cvRange * 0.25)), yb = yOf(Math.max(cvRange * 0.04, rem));
+      const yc = yOf(Math.min(cvRange, rem + cvRange * 0.15)), yd = yOf(Math.min(cvRange, rem + cvRange * 0.37));
+      d += ` C ${ex} ${(Y_EGO + ya) / 2}, ${ox} ${ya}, ${ox} ${yb} L ${ox} ${yc} C ${ox} ${yd}, ${X0} ${yc}, ${X0} ${yd} L ${X0} ${Y_TOP}`;
+    } else if (v.mode === 'STOP') {
+      d += ` L ${ex} ${rem != null ? yOf(Math.max(cvRange * 0.01, rem - cvRange * 0.075)) : Y_EGO - 14}`;
+    } else if (v.car) {
+      d += ` C ${ex} ${Y_EGO - 50}, ${X0} ${Y_EGO - 60}, ${X0} ${Y_EGO - 90} L ${X0} ${Y_TOP}`;
+    }
+    plan.setAttribute('d', d);
+    obs.textContent = '';
+    for (const o of v.hazards) {
+      if (o.remaining == null || o.remaining > cvRange) continue;
+      const x = xOf(o.lat), y = yOf(o.remaining);
+      const w = Math.max(4, (o.size > 0 ? o.size : 1) * pxM);
+      const g = el('g', {}, obs);
+      if (h && o.id === h.id) el('circle', { cx: x, cy: y, r: 12, fill: 'none', stroke: `var(--lv${o.sev}-bg)`, 'stroke-width': 1.5, opacity: 0.7 }, g);
+      el('rect', { x: x - w / 2, y: y - 5, width: w, height: 10, rx: 3, fill: `var(--lv${o.sev}-bg)`, stroke: 'var(--panel)', 'stroke-width': 1 }, g);
+      el('text', { x: x + w / 2 + 4, y: y + 3, 'font-size': '8.5', 'font-weight': '700', fill: 'var(--text)' }, g).textContent = `#${o.id}`;
+      if (o.side === 4) el('line', { x1: xOf(-half), y1: y - 9, x2: xOf(half), y2: y - 9, stroke: 'var(--lv3-bg)', 'stroke-width': 2, 'stroke-dasharray': '3 3' }, g);
+    }
+  }
+
+
+  // An original demonstration circuit. Live views use the configured course geometry.
+  const demoCircuit = {
+    points:[[0,0],[25,80],[10,170],[45,270],[115,310],[160,280],[135,230],
+            [75,210],[65,170],[130,150],[190,220],[250,235],[275,190],
+            [250,130],[190,45],[125,-40],[75,-50],[45,-20],[0,0]],
+    closed:true
+  };
+  function circuitLength(points) {
+    return points.slice(1).reduce((sum,p,i) => sum + Math.hypot(p[0]-points[i][0],p[1]-points[i][1]),0);
+  }
+  demoCircuit.length_m = circuitLength(demoCircuit.points);
+  let circuitSignature = '', circuitGeometry = null, carDot, droneDot;
+  function drawCircuit(v) {
+    const circuit = v.src === 'sim' ? demoCircuit : v.circuit;
+    const svg = $('circuit-map');
+    const signature = JSON.stringify(circuit);
+    if (signature !== circuitSignature) {
+      circuitSignature = signature;
+      svg.textContent = '';
+      circuitGeometry = null;
+      if (circuit && circuit.points && circuit.points.length > 1) {
+        const points = circuit.points;
+        const xs = points.map(p=>p[0]), ys = points.map(p=>p[1]);
+        const minX = Math.min(...xs), maxY = Math.max(...ys);
+        const scale = Math.min(340 / Math.max(1,Math.max(...xs)-minX),270 / Math.max(1,maxY-Math.min(...ys)));
+        const width = (Math.max(...xs)-minX)*scale, height=(maxY-Math.min(...ys))*scale;
+        const project = p => [40+(340-width)/2+(p[0]-minX)*scale,40+(270-height)/2+(maxY-p[1])*scale];
+        const projected = points.map(project);
+        const d = projected.map((p,i)=>(i?'L':'M')+p.join(' ')).join(' ');
+        el('path',{d,fill:'none',stroke:'#05080d','stroke-width':19,'stroke-linejoin':'round'},svg);
+        el('path',{d,fill:'none',stroke:'var(--border)','stroke-width':13,'stroke-linejoin':'round'},svg);
+        const colors=['#55dfd2','#ffb65d','#9b89ff'];
+        for(let i=1;i<projected.length;i++) {
+          const color=colors[Math.min(2,Math.floor((i-1)*3/(projected.length-1)))];
+          el('path',{d:'M'+projected[i-1].join(' ')+' L'+projected[i].join(' '),fill:'none',stroke:color,'stroke-width':5,'stroke-linecap':'round'},svg);
+        }
+        const start=projected[0];
+        const text=el('text',{x:start[0]+12,y:start[1]+20,fill:'var(--muted)','font-size':10},svg);
+        text.textContent='START';
+        droneDot=el('circle',{r:5,fill:'var(--success)',stroke:'#101319','stroke-width':3},svg);
+        carDot=el('circle',{r:7,fill:'var(--accent)',stroke:'#ffffff','stroke-width':2},svg);
+        circuitGeometry={points,project,length:circuitLength(points),closed:circuit.closed};
+      } else {
+        const text=el('text',{x:210,y:175,'text-anchor':'middle',fill:'var(--muted)','font-size':14},svg);
+        text.textContent='프로필에 설정된 코스가 없습니다';
+      }
+    }
+    $('circuit-source').textContent=v.src==='sim'?'예시 서킷 · 시뮬레이션':circuitGeometry?'프로필 코스':'코스 없음';
+    if (!circuitGeometry) {
+      $('circuit-length').textContent='— m';
+      $('circuit-progress').textContent='코스 데이터 대기';
+      return;
+    }
+    const g=circuitGeometry;
+    const locate = station => {
+      let at=g.closed?((station%g.length)+g.length)%g.length:Math.max(0,Math.min(g.length,station));
+      for(let i=1;i<g.points.length;i++){
+        const a=g.points[i-1],b=g.points[i],length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+        if(at<=length || i===g.points.length-1) return g.project([a[0]+(b[0]-a[0])*Math.min(1,at/(length||1)),a[1]+(b[1]-a[1])*Math.min(1,at/(length||1))]);
+        at-=length;
+      }
+    };
+    const position = (dot,station) => {
+      dot.style.display=station==null?'none':'';
+      if(station!=null){const p=locate(station);dot.setAttribute('cx',p[0]);dot.setAttribute('cy',p[1]);}
+    };
+    position(carDot,v.s);
+    position(droneDot,v.s!=null && v.drone && v.drone.lead!=null?v.s+v.drone.lead:null);
+    $('circuit-length').textContent=Math.round(g.length).toLocaleString()+' m · '+(g.closed?'폐쇄 코스':'개방 코스');
+    $('circuit-progress').textContent=v.s==null?'차량 위치 대기':Math.round(g.closed?((v.s%g.length)+g.length)%g.length:Math.max(0,Math.min(g.length,v.s)))+' m / '+Math.round(g.length)+' m';
+  }
+
+  /* ---------- Render ---------- */
+  const fmt = (x, d) => (x == null ? '—' : x.toFixed(d));
+  const setBadge = (id, text, tone) => { const b = $(id); b.lastChild.textContent = text; b.dataset.tone = tone; };
+  const SRC = {
+    sim: ['시뮬레이션', 'accent'], live: ['Linker 실시간', 'success'],
+    wait: ['Linker 연결 중', 'warning'], lost: ['Linker 응답 없음', 'danger']
+  };
+  function setSource(src) { setBadge('b-src', SRC[src][0], SRC[src][1]); }
+
+  function bannerOf(v) {
+    if (!v.car) {
+      if (v.hazards.length) {
+        const top = v.hazards.reduce((a, b) => (b.sev > a.sev ? b : a));
+        return [top.sev, `${KINDS[top.type]} · 거리/TTA 미확인 · 차량 GPS 대기`];
+      }
+      return [0, '차량 GPS 대기'];
+    }
+    const h = v.hazard, mode = v.mode;
+    if (!h && ['STOP', 'CAUTION', 'LINK_DEGRADED'].indexOf(mode) < 0) {
+      return [0, `장애물 없음 · ${mode} · ${mode === 'MANUAL' ? '수동 운전' : '계획 주행선 유지'}`];
+    }
+    const dir = { STOP: '■ 정지', CAUTION: '↓ 감속', LINK_DEGRADED: '↓ 링크 확인', AVOID: v.offset < 0 ? '← 좌측 회피' : '→ 우측 회피' }[mode] || '장애물 확인';
+    const dist = h && h.remaining != null ? `${h.remaining.toFixed(1)} m` : '거리 —';
+    const eta = h && h.tta != null ? `TTA ${h.tta.toFixed(1)} 초` : 'TTA —';
+    return [h ? h.sev : 2, `${dist} / ${eta} · ${mode} · ${dir}${v.margin_short ? ' · 정지 거리 여유 부족' : ''}`];
+  }
+
+  let alertsAt = -Infinity, alertsIds = null, logSig = '';
+  function render(v) {
+    const max = niceMax(v.speed_limit_kmh);
+    if (max !== speedMax) buildSpeedo(max);
+    if (v.range !== cvRange || v.width !== cvWidth) buildCourse(v.range, v.width);
+    setSource(v.src);
+    const kmh = v.speed_mps * 3.6;
+    drawSpeed(kmh, v.rpm);
+    drawHeading(v.heading, v.course_ahead, v.drone_bearing);
+    drawCourse(v);
+    drawCircuit(v);
+
+    $('g-speed').textContent = v.car && v.speedValid !== false ? Math.round(kmh) : '—';
+    $('g-ms').textContent = v.car && v.speedValid !== false ? v.speed_mps.toFixed(1) : '—';
+    $('g-rpm').textContent = v.rpm == null ? '—' : Math.round(v.rpm).toLocaleString();
+    $('g-gear').textContent = v.gear == null ? '—' : (v.gear === 0 ? 'N' : v.gear);
+    $('spd-cap').textContent = `목표 ${v.target_mps == null ? '—' : Math.round(v.target_mps * 3.6)} km/h`;
+    $('m-speed').textContent = v.car && v.speedValid !== false ? Math.round(kmh) : '—';
+    $('m-ms').textContent = v.car && v.speedValid !== false ? v.speed_mps.toFixed(1) : '—';
+    $('m-rpm').textContent = v.rpm == null ? '—' : Math.round(v.rpm).toLocaleString();
+    $('m-rpm-sub').textContent = v.rpm == null ? '차량 텔레메트리 없음' : `${v.gear === 0 ? 'N' : v.gear}단 · 레드라인 13,500`;
+    if (v.drone && v.drone.lead != null) {
+      $('m-lead').textContent = v.drone.lead.toFixed(1);
+      const bat = v.drone.battery != null && v.drone.battery >= 0 ? ` · 배터리 ${Math.round(v.drone.battery)}%` : '';
+      $('m-lead-sub').textContent = `SYS 1 · 고도 ${fmt(v.drone.alt, 1)} m${bat}${v.drone.sensor_ok ? '' : ' · 센서 이상'}`;
+    } else {
+      $('m-lead').textContent = '—';
+      $('m-lead-sub').textContent = 'SYS 1 · DRONE_STATE 대기';
+    }
+    $('hdg-rate').textContent = v.car && v.heading != null ? `${v.heading_rate >= 0 ? '+' : ''}${Math.round(v.heading_rate)}°/s` : '— °/s';
+
+    const bar = (id, bid, x) => { $(id).textContent = x == null ? '—' : Math.round(x); $(bid).style.width = (x == null ? 0 : Math.max(0, Math.min(100, x))) + '%'; };
+    bar('t-thr', 'b-thr', v.thr);
+    bar('t-brk', 'b-brk', v.brk);
+    bar('t-ers', 'b-ers', v.ers);
+    const glat = Math.abs(v.speed_mps * v.heading_rate * Math.PI / 180) / 9.81;
+    $('t-g').textContent = v.car && v.heading != null ? glat.toFixed(1) : '—';
+    $('b-g').style.width = Math.min(100, glat / 4 * 100) + '%';
+    $('t-s').textContent = v.s == null ? '—' : Math.round(v.s).toLocaleString();
+    $('t-lat').textContent = v.car && v.s != null ? (v.lat >= 0 ? '+' : '') + v.lat.toFixed(1) : '—';
+    $('tele-cap').textContent = v.rpm == null && v.src !== 'sim' ? 'CAR_STATE · 구동 값 없음' : 'CAR_STATE';
+
+    const [level, text] = bannerOf(v);
+    const banner = $('banner');
+    if (banner.textContent !== text) banner.textContent = text;
+    banner.dataset.level = level;
+
+    const mode = v.car ? v.mode : 'LINK_DEGRADED';
+    setBadge('b-mode', v.car ? mode : '차량 GPS 대기', v.car ? MODE_TONE[mode] : 'warning');
+    setBadge('b-link', v.link.degraded ? `링크 ${v.link.ok}/${v.link.total} · heartbeat 없음` : `링크 ${v.link.ok}/${v.link.total} · 서명`, v.link.degraded ? 'danger' : 'success');
+    setBadge('b-sync', v.link.synced ? `동기화 완료 · epoch ${v.link.epoch}` : '경보 동기화 대기', v.link.synced ? 'success' : 'warning');
+    setBadge('b-veh', v.vehicle, 'accent');
+
+    const h = v.hazard;
+    if (h && h.remaining != null) {
+      $('m-haz').textContent = h.remaining.toFixed(1);
+      $('m-haz-sub').textContent = `TTA ${h.tta == null ? '—' : h.tta.toFixed(1) + ' 초'} · ${KIND_KO[h.type]} ${SEV[h.sev]}`;
+    } else {
+      $('m-haz').textContent = '—';
+      $('m-haz-sub').textContent = h ? `${KIND_KO[h.type]} ${SEV[h.sev]} · 거리 미확인` : 'TTA — · 경보 없음';
+    }
+
+    const now = performance.now();
+    const ids = v.hazards.map((o) => `${o.id}:${o.sev}:${o.state}`).join(',');
+    if (ids !== alertsIds || now - alertsAt > 300) {
+      alertsAt = now;
+      alertsIds = ids;
+      renderAlerts(v.hazards);
+    }
+    $('r-hb').textContent = `${fmt(v.rates.hb, 1)} Hz`;
+    $('r-ds').textContent = `${fmt(v.rates.ds, 1)} Hz`;
+    $('r-cs').textContent = `${fmt(v.rates.cs, 1)} Hz`;
+    $('lat-cap').textContent = v.delay_ms == null ? '지연 — ms' : `도착−송신 ${Math.round(v.delay_ms)} ms`;
+    const sig = v.log.length ? `${v.log.length}:${v.log[0].utc_ms}:${v.log[0].text}` : '0';
+    if (sig !== logSig) { logSig = sig; renderLog(v.log); }
+    $('note').textContent = v.note;
+  }
+
+  function renderAlerts(list) {
+    const box = $('alerts');
+    box.textContent = '';
+    if (!list.length) {
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = '유효한 장애물 없음 · Sentinel이 새 경보를 보내면 여기에 표시됩니다';
+      box.appendChild(e);
+      return;
+    }
+    for (const o of list.slice(0, 6)) {
+      const it = document.createElement('div');
+      it.className = 'item';
+      it.dataset.level = o.sev;
+      const sev = document.createElement('div'); sev.className = 'sev';
+      const body = document.createElement('div');
+      const t = document.createElement('div'); t.className = 't';
+      t.textContent = `${KIND_KO[o.type]} #${o.id} `;
+      const em = document.createElement('em'); em.textContent = `${SEV[o.sev]} · ${STATES[o.state]}`;
+      t.appendChild(em);
+      const m = document.createElement('div'); m.className = 'm num';
+      const size = o.size != null && o.size >= 0 ? `${o.size.toFixed(1)} m` : '미상';
+      m.textContent = `lateral ${o.lat >= 0 ? '+' : ''}${fmt(o.lat, 1)} m · 여유 ${SIDES[o.side]} · 크기 ${size} · TTL ${Math.ceil(o.ttl_s)} 초`;
+      body.append(t, m);
+      const rr = document.createElement('div'); rr.className = 'r num';
+      rr.textContent = o.remaining == null ? '거리 —' : `${o.remaining.toFixed(1)} m`;
+      const sm = document.createElement('small');
+      sm.textContent = o.tta == null ? 'TTA —' : `TTA ${o.tta.toFixed(1)} 초`;
+      rr.appendChild(sm);
+      it.append(sev, body, rr);
+      box.appendChild(it);
+    }
+  }
+
+  const DIR = { S: 'S→L', L: 'L→S', local: '차량' };
+  function renderLog(log) {
+    const tb = $('log');
+    tb.textContent = '';
+    for (const e of log.slice(0, 9)) {
+      const tr = document.createElement('tr');
+      [new Date(e.utc_ms).toISOString().slice(11, 23), DIR[e.dir] || e.dir, e.kind, e.seq == null ? '—' : e.seq, e.text].forEach((c, i) => {
+        const td = document.createElement('td');
+        td.textContent = c;
+        if (i === 1) td.className = 'dir-' + e.dir;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    }
+  }
+
+  /* ---------- Live: Linker drive_dashboard.py (SSE) ---------- */
+  const NOTE_LIVE = 'Linker 실시간 · 127.0.0.1 · 대시보드는 판단 값을 읽기만 합니다.';
+  const NOTE_SIM = '시뮬레이션 데이터입니다. Linker에서 Guide → 수신 시작 후 「대시보드」를 누르면 실시간 데이터가 표시됩니다.';
+  const NOTE_STANDBY = '실제 연결 없음 · 시뮬레이션을 표시합니다. Linker에서 Guide → 수신 시작을 누르면 이 화면이 실데이터로 바뀝니다.';
+  let simOn = false;
+  let lastView = null;
+  function idleView(src) {
+    return {
+      src, vehicle: 'SYS 2 · 차량', speed_limit_kmh: 72, range: 60, width: 12, car: false,
+      speed_mps: 0, target_mps: null, heading: null, heading_rate: 0, course_ahead: null, drone_bearing: null,
+      rpm: null, gear: null, thr: null, brk: null, ers: null, s: null, lat: 0,
+      mode: null, offset: 0, margin_short: false, hazard: null, hazards: [], drone: null,
+      link: { ok: 0, total: 2, synced: false, epoch: 0, degraded: true },
+      rates: { hb: null, ds: null, cs: null }, delay_ms: null, log: [], note: NOTE_LIVE
+    };
+  }
+  let prevHdg = null, prevT = 0, hdgRate = 0;
+  function fromSnapshot(snap) {
+    const p = snap.profile, car = snap.car, dec = snap.decision, tel = (car && car.telemetry) || {};
+    if (car && car.heading != null) {
+      const t = snap.t_utc_ms / 1000;
+      if (prevHdg != null && t > prevT) {
+        const d = ((car.heading - prevHdg + 540) % 360) - 180;
+        hdgRate += (d / (t - prevT) - hdgRate) * 0.3;
+      }
+      prevHdg = car.heading; prevT = t;
+    }
+    const hazards = snap.hazards.map((o) => ({
+      id: o.id, type: o.type, sev: o.severity, state: o.state, lat: o.lateral_m, side: o.free_side,
+      size: o.size_m, ttl_s: o.ttl_left_ms / 1000, remaining: o.remaining_m, tta: o.tta_s
+    }));
+    const byId = dec && dec.hazard_id != null ? hazards.find((o) => o.id === dec.hazard_id) : null;
+    const age = snap.link.paths_age_ms;
+    return {
+      circuit: snap.circuit || null,
+      src: 'live', vehicle: `SYS 2 · ${p.vehicle_kind}`,
+      speed_limit_kmh: p.speed_limit_mps * 3.6, range: p.view_range_m, width: p.course_width_m, car: !!car,
+      speed_mps: car ? car.speed_mps : 0, target_mps: dec ? dec.target_speed_mps : null,
+      heading: car ? car.heading : null, heading_rate: car ? hdgRate : 0,
+      course_ahead: snap.course_heading_ahead, drone_bearing: snap.drone_bearing,
+      rpm: tel.rpm != null ? tel.rpm : null, gear: tel.gear != null ? Math.round(tel.gear) : null,
+      thr: tel.throttle_pct != null ? tel.throttle_pct : null, brk: tel.brake_pct != null ? tel.brake_pct : null,
+      ers: tel.ers_pct != null ? tel.ers_pct : null,
+      s: car ? car.track_s_m : null, lat: car ? car.lateral_m : 0,
+      mode: dec ? dec.mode : (car ? 'LINK_DEGRADED' : null),
+      offset: dec ? dec.requested_offset_m : 0, margin_short: dec ? dec.margin_short : false,
+      hazard: byId || hazards[0] || null, hazards,
+      drone: snap.drone ? { lead: snap.drone.lead_distance_m, alt: snap.drone.alt, battery: snap.drone.battery_pct, sensor_ok: snap.drone.sensor_ok } : null,
+      link: {
+        ok: age.filter((a) => a != null && a < p.link_degraded_ms).length, total: age.length,
+        synced: snap.link.synchronized, epoch: snap.link.epoch, degraded: snap.link.degraded
+      },
+      rates: { hb: snap.rates.GUIDE_HEARTBEAT, ds: snap.rates.DRONE_STATE, cs: snap.rates.TX_CAR_STATE },
+      delay_ms: snap.delay_ms, log: snap.log, note: NOTE_LIVE
+    };
+  }
+  function startLive() {
+    lastView = idleView('wait');
+    render(lastView);
+    let lastMsg = 0;
+    const es = new EventSource('/events');
+    es.onmessage = (e) => {
+      let snap;
+      try { snap = JSON.parse(e.data); } catch (err) { return; }
+      if (snap.standby) {
+        guideLive=false;
+        lastMsg = 0;
+        if (!desktopHasVehicle) { lastView=idleView('wait'); render(lastView); }
+        return;
+      }
+      if (!snap.profile) return;
+      guideLive=true;
+      simOn = false;
+      prevHdg = null;
+      lastMsg = performance.now();
+      lastView = fromSnapshot(snap);
+      render(lastView);
+    };
+    setInterval(() => {
+      if (!simOn && performance.now() - lastMsg > 1500 && lastView) {
+        lastView.src = lastMsg ? 'lost' : 'wait';
+        setSource(lastView.src);
+      }
+    }, 500);
+  }
+
+  /* ---------- Simulation (same view model) ---------- */
+  let simGen = 0;
+  function startSim(note) {
+    simOn = true;
+    const gen = ++simGen;
+    const car ={ s: 0, v: 52, lat: 0, thr: 60, brk: 0, ers: 82 };
+    const obstacles = [];
+    const log = [];
+    const seq = {};
+    let nextId = 101, nextSpawnS = 140, simT = 0, lastMode = 'NORMAL';
+    const link = { degradedUntil: 0, nextDrop: 42000, syncing: false, epoch: 1 };
+    const LEAD_M = 120, GEAR_MIN = [0, 0, 22, 34, 46, 57, 67, 76, 86];
+    const headingAt = (s) => (30 + 40 * Math.sin(s / 600) + 25 * Math.sin(s / 230) + 360) % 360;
+    const curvature = (s) => Math.abs((40 / 600) * Math.cos(s / 600) + (25 / 230) * Math.cos(s / 230)) * Math.PI / 180;
+    const push = (dir, kind, text) => {
+      const counted = dir !== 'local';
+      if (counted) seq[kind] = (seq[kind] || 0) + 1;
+      log.unshift({ utc_ms: Date.now(), dir, kind, seq: counted ? seq[kind] : null, text });
+      if (log.length > 12) log.pop();
+    };
+    function spawn() {
+      const r = Math.random();
+      const type = r < .35 ? 1 : r < .6 ? 2 : r < .8 ? 5 : r < .9 ? 3 : 4;
+      const sev = { 1: 2, 2: Math.random() < .5 ? 1 : 2, 3: 3, 4: Math.random() < .5 ? 2 : 3, 5: 1 }[type];
+      const lat = +(Math.random() * 8 - 4).toFixed(1);
+      let side = lat < -1 ? 2 : lat > 1 ? 1 : 3;
+      if (sev === 3 && Math.random() < .5) side = 4;
+      const o = {
+        id: nextId++, type, sev, lat, side, state: 0,
+        s: car.s + 210 + Math.random() * 30,
+        size: type === 2 ? 2.0 : type === 5 ? 3.0 : +(0.6 + Math.random()).toFixed(1),
+        tDetect: simT, ttl: side === 4 ? 11000 : 30000
+      };
+      obstacles.push(o);
+      push('S', 'OBSTACLE_ALERT', `#${o.id} NEW ${KINDS[type]} ${SEV[sev]} lat ${lat >= 0 ? '+' : ''}${lat.toFixed(1)} m · 여유 ${SIDES[side]}`);
+    }
+    function decide() {
+      if (simT < link.degradedUntil) return { mode: 'LINK_DEGRADED', h: null, offset: 0 };
+      const ahead = obstacles.filter((o) => o.s - car.s > -2 && o.s - car.s < 170).sort((a, b) => a.s - b.s);
+      const h = ahead.find((o) => o.sev >= 2) || ahead.find((o) => o.sev >= 1);
+      if (!h) return { mode: 'NORMAL', h: null, offset: 0 };
+      if (h.sev === 1) return { mode: 'CAUTION', h, offset: 0 };
+      if (h.side === 4) return { mode: 'STOP', h, offset: 0 };
+      let off = h.side === 1 ? h.lat - 3.2 : h.side === 2 ? h.lat + 3.2 : (h.lat >= 0 ? h.lat - 3.2 : h.lat + 3.2);
+      return { mode: 'AVOID', h, offset: Math.max(-5, Math.min(5, off)) };
+    }
+    push('S', 'GUIDE_HEARTBEAT', '세션 시작 · 센서 준비 (health bit0)');
+    push('local', 'SYNC', '동기화 완료 · epoch 1 · 장애물 0건');
+    let last = performance.now();
+    function frame(now) {
+      if (!simOn || gen !== simGen) return;
+      const dt = Math.min(0.08, (now - last) / 1000);
+      last = now;
+      simT += dt * 1000;
+      if (simT > link.nextDrop && !link.syncing) {
+        link.degradedUntil = simT + 2600;
+        link.nextDrop = simT + 45000 + Math.random() * 15000;
+        link.syncing = true;
+        push('local', 'LINK', 'heartbeat 끊김 · 재동기화 요청');
+      }
+      if (link.syncing && simT >= link.degradedUntil) {
+        link.syncing = false;
+        link.epoch++;
+        push('local', 'SYNC', `동기화 완료 · epoch ${link.epoch} · 장애물 ${obstacles.length}건`);
+      }
+      if (car.s > nextSpawnS) { spawn(); nextSpawnS = car.s + 260 + Math.random() * 200; }
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.state = simT - o.tDetect > 300 ? 1 : 0;
+        if (simT - o.tDetect > o.ttl) { obstacles.splice(i, 1); push('S', 'HAZARD_CLEAR', `#${o.id} CLEARED`); }
+        else if (o.s - car.s < -2) { obstacles.splice(i, 1); push('local', 'PASS', `#${o.id} 차량 통과`); }
+      }
+      const dec = decide();
+      if (dec.mode !== lastMode) {
+        if (dec.mode !== 'LINK_DEGRADED') push('S', 'DRIVE_ADVICE', `${dec.mode}${dec.h ? ' · 원인 #' + dec.h.id : ''}${dec.offset ? ` · offset ${dec.offset >= 0 ? '+' : ''}${dec.offset.toFixed(1)} m` : ''}`);
+        push('L', 'MODE_ACK', `${dec.mode} · 수락`);
+        lastMode = dec.mode;
+      }
+      const h = dec.h, rem = h ? Math.max(0, h.s - car.s) : null;
+      let vt = Math.min(84, Math.sqrt(22 / Math.max(curvature(car.s + 40), 1e-4)));
+      if (dec.mode === 'CAUTION') vt *= 0.7;
+      if (dec.mode === 'AVOID') vt = Math.min(vt, 50);
+      if (dec.mode === 'LINK_DEGRADED') vt *= 0.5;
+      if (dec.mode === 'STOP') vt = Math.sqrt(2 * 12 * Math.max(0, rem - 12));
+      const accel = Math.max(-40, Math.min(12, (vt - car.v) * 1.6));
+      car.v = Math.max(0, car.v + accel * dt);
+      car.s += car.v * dt;
+      const latTarget = dec.mode === 'AVOID' ? dec.offset : 0;
+      car.lat += Math.max(-3 * dt, Math.min(3 * dt, latTarget - car.lat));
+      car.thr += ((accel > 0 ? Math.min(100, 40 + accel * 6) : 0) - car.thr) * Math.min(1, dt * 8);
+      car.brk += ((accel < 0 ? Math.min(100, -accel * 2.4) : 0) - car.brk) * Math.min(1, dt * 8);
+      car.ers = Math.max(10, Math.min(100, car.ers + (car.thr > 70 ? -1.2 : 1.8) * dt));
+      let gear = 1;
+      for (let g = 8; g >= 1; g--) if (car.v >= GEAR_MIN[g]) { gear = g; break; }
+      const lo = GEAR_MIN[gear], hi = GEAR_MIN[gear + 1] || 96;
+      const rpm = car.v < 1 ? 4000 : 4500 + Math.min(1, (car.v - lo) / (hi - lo)) * (REDLINE - 4500);
+      const hdg = headingAt(car.s);
+      const rate = (((headingAt(car.s + car.v * dt) - hdg + 540) % 360) - 180) / Math.max(dt, 1e-3);
+      const deg = simT < link.degradedUntil;
+      const hazards = obstacles.map((o) => {
+        const r = Math.max(0, o.s - car.s);
+        return { id: o.id, type: o.type, sev: o.sev, state: o.state, lat: o.lat, side: o.side, size: o.size,
+                 ttl_s: Math.max(0, (o.ttl - (simT - o.tDetect)) / 1000), remaining: r, tta: car.v > 0.5 ? r / car.v : null };
+      }).sort((a, b) => b.sev - a.sev || a.remaining - b.remaining);
+      render({
+        src: 'sim', vehicle: 'SYS 2 · 포뮬러 #07', speed_limit_kmh: 360, range: 160, width: 12, car: true,
+        speed_mps: car.v, target_mps: vt, heading: hdg, heading_rate: rate,
+        course_ahead: headingAt(car.s + 150), drone_bearing: headingAt(car.s + LEAD_M * 0.6),
+        rpm, gear: car.v < 1 ? 0 : gear, thr: car.thr, brk: car.brk, ers: car.ers, s: car.s, lat: car.lat,
+        mode: dec.mode, offset: dec.offset, margin_short: dec.mode === 'STOP' && rem != null && car.v * car.v / 24 > rem - 12 + 0.5,
+        hazard: h ? hazards.find((o) => o.id === h.id) : (hazards[0] || null), hazards,
+        drone: { lead: LEAD_M, alt: 35 + Math.sin(simT / 1300) * 0.6, battery: 78, sensor_ok: true },
+        link: { ok: deg ? 0 : 2, total: 2, synced: !link.syncing, epoch: link.epoch, degraded: deg },
+        rates: { hb: deg ? 0 : 9.8 + Math.random() * 0.4, ds: deg ? 0 : 9.7 + Math.random() * 0.5, cs: 19.6 + Math.random() * 0.6 },
+        delay_ms: deg ? null : 22 + Math.random() * 18, log, note: note || NOTE_SIM
+      });
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') startLive();
+  else { lastView=idleView('wait'); render(lastView); }
+})();
+</script>
+</body>
+</html>

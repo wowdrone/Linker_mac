@@ -1,0 +1,53 @@
+# Linker local RTSP relay (mediamtx).
+# Key names checked against the official reference mediamtx.yml (bluenviron/mediamtx, latest
+# release v1.21.4, fetched 2026-11-22). mediamtx was NOT installed when this file was written:
+# re-check against the installed version (`mediamtx --version`) before field use.
+#
+# camera ─(HM30, one RTSP session, TCP)─▶ this relay (127.0.0.1 only) ─▶ Linker, Sentinel
+# The camera URL is never stored here: video_relay_start.command passes it as the
+# environment variable MTX_PATHS_CAM_SOURCE (mediamtx MTX_<PARAM> override rule).
+
+logLevel: info
+logDestinations: [stdout]
+readTimeout: 10s
+writeTimeout: 10s
+
+# Status API on loopback only (video_relay_status.command reads /v3/paths/list).
+api: true
+apiAddress: 127.0.0.1:9997
+metrics: false
+pprof: false
+playback: false
+
+# RTSP server for local readers: loopback only, TCP only (no UDP / multicast listeners needed).
+rtsp: true
+rtspTransports: [tcp]
+rtspEncryption: "no"
+rtspAddress: 127.0.0.1:8554
+
+# Unused protocols off.
+rtmp: false
+hls: false
+webrtc: false
+srt: false
+
+# Only this Mac may read the stream or query the API; nobody may publish into the relay.
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: ['127.0.0.1', '::1']
+    permissions:
+      - action: read
+        path:
+      - action: api
+
+paths:
+  cam:
+    # Replaced at start by MTX_PATHS_CAM_SOURCE=rtsp://<camera>/... (see video_relay_start.command).
+    source: publisher
+    # Camera → relay over TCP (H.265 over UDP has produced RTP packet-size errors in the field).
+    rtspTransport: tcp
+    # Keep one session to the camera even when no reader is connected (stable link, fast attach).
+    sourceOnDemand: no
+    record: no

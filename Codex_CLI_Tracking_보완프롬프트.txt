@@ -1,0 +1,103 @@
+Mac의 /Users/kimmunju/workspace/Linker_mac 실제 소스를 수정해 Linker Tracking 2단계(TrackingService·브라우저 대시보드·PyQt Tracking 창 연동)의 결함을 고치고 보완하라. 한국어로 보고하고, 분석만 하고 끝내지 말고 아래 0~7단계를 구현·검증하라. 실기 비행제어(RC/자세/위치/속도 출력, arm, takeoff)와 Sentinel 외부 소스 변경은 이번 범위에 포함하지 않는다.
+
+현재 상태(2026-11-22 기준, 직접 확인된 사실)
+- TrackingService(tracking_service.py)가 하나의 TrackingSession과 _SharedCapture를 소유하고, PyQt Tracking 창(tracking_panel.py)과 브라우저 대시보드(tracking_dashboard.py + tracking_dashboard.html, dashboard_server.py 공통 계층)가 이를 공유한다. main_window.py가 TrackingService를 만들어 TrackingPanel(self, service)에 넘긴다.
+- TrackingService에는 원래 event(kind, text, level) 메서드가 있었는데, 이것이 QObject.event(QEvent)를 덮어써서 Qt 이벤트가 들어오는 즉시 앱이 TypeError로 종료되었다. log_event()로 이름을 바꿔 해결했다. 이 결함을 잡는 테스트가 없었다.
+- Linker_mac.spec에 tracking_dashboard.html과 tracking_service/tracking_dashboard/dashboard_server/flight_mode_controller hidden import를 추가했다. 빌드는 Command Line Tools로 xcode-select를 전환한 뒤 성공했다.
+- 기존 테스트 통과: test_tracking_core, test_tracking_session, test_tracking_replay, test_tracking_ui, test_tracking_main_window, test_shared_video(모듈별 별도 프로세스).
+- 변경 전 백업: tracking_backup_20261122/, tracking_backup_20261122_stage2/(before_wiring_0140 포함). 지우지 말라.
+
+0. 변경 전 조사와 보호
+1) 위 사실을 실제 파일로 다시 확인하라. 기존 변경·백업 폴더를 지우거나 덮어쓰지 말라. 바꾸기 전에 새 백업 폴더(tracking_backup_20261122_stage3/)에 원본과 SHA256을 남겨라.
+2) xcode-select가 Command Line Tools로 바뀌었으므로 git이 동작하는지 확인하라. git init·커밋은 하지 말고, 보고서에 "git 저장소 도입 권장"과 .gitignore 초안(아래 5단계)만 제시하라.
+3) 기존 .venv(Python 3.12 arm64, OpenCV)를 사용하고 패키지를 자동 교체하지 말라. 테스트는 모듈별 별도 프로세스로 실행하라.
+
+1. [P0] 브라우저 비행 모드 변경 — 사용자 결정: 허용(2026-11-22)
+- 원래 지침은 "브라우저에 새 비행제어 엔드포인트를 추가하지 말라"였으나, 사용자가 브라우저 대시보드의 비행 모드 변경을 허용하기로 결정했다. 현재 tracking_dashboard.py의 mode_prepare / mode_commit / mode_cancel 흐름을 유지한다. 이 기능을 삭제하거나 기본 비활성으로 바꾸지 말라.
+- 허용 범위는 "비행 모드 변경 요청"뿐이다. ARM/DISARM, TAKEOFF, AUTO/MISSION 시작, RC·자세·위치·속도 명령, 파라미터 변경은 브라우저에서 계속 금지한다. flight_mode_controller.py의 OFFERED/DISABLED 목록을 유지하고 AUTO·TAKEOFF·MISSION이 브라우저 요청으로 절대 송신되지 않음을 테스트로 증명하라.
+- 기존 안전 흐름(확인 티켓, TTL, commit 직전 재검증, 1회 송신, 자동 재시도 없음, HEARTBEAT로 결과 확인)을 유지하라. commit 직전 선택 기체의 동일성(link/sysid/compid), HEARTBEAT 신선도, 현재 모드·armed가 티켓과 같지 않으면 송신하지 않는지 테스트로 증명하라. 요청 대상 기체 키가 현재 선택 기체와 다르면 거부하는 경로도 테스트하라.
+- 동시 조작 보호: PyQt 창과 브라우저(또는 브라우저 탭 2개)에서 동시에 모드 요청이 들어와도 한 번에 하나의 티켓만 유효하고, 다른 쪽 티켓은 무효화되는지 확인하라.
+- 감사 기록: 모든 모드 요청(prepare/commit/cancel/거부/결과)을 출처(app/web), 기체 식별자, 이전·목표 모드, armed, 결과와 함께 로그 저장 JSON에 남겨라.
+- 표시: 브라우저 대시보드가 켜져 있는 동안 PyQt Tracking 창에 "브라우저에서 비행 모드 변경 가능" 표시를 상시 띄워라. 브라우저 확인 패널에는 ARMED 상태일 때 경고를 더 크게(빨강) 표시하라.
+- 남은 위험을 문서화하라: 대시보드는 127.0.0.1 전용이지만 같은 Mac의 다른 로컬 프로세스는 GET /로 토큰이 들어간 페이지를 받을 수 있다(기존 drive_dashboard와 같은 구조). 이 위험과 완화책(대시보드는 필요할 때만 열고 사용 후 닫기)을 docs/tracking_monitor.md에 적어라.
+- docs/tracking_monitor.md의 "새 브라우저 엔드포인트는 없다" 문장을 실제 상태(Tracking 대시보드 · 모드 변경 허용 · 허용/금지 범위)로 고쳐라.
+
+2. [P0] 회귀 방지 테스트 추가(이번에 놓친 결함 재발 방지)
+- tests/test_tracking_service.py: QApplication에서 TrackingService를 생성·자식 QTimer 생성·postEvent/processEvents를 거쳐도 예외가 없는지, QObject 메서드 이름(event, timerEvent, childEvent, eventFilter 등)을 덮어쓰는 메서드가 없는지 정적 검사를 포함하라. start_demo → TRACKING, simulate, intervention → STOPPED, set_vehicle 변경 시 세션 취소, shutdown 두 번 호출 안전성을 검증하라.
+- tests/test_tracking_dashboard.py: 실제 LoopbackServer를 ephemeral 포트로 띄워 Host 불일치 403, 토큰 없음 403, Origin 불일치 403, 본문 초과·비JSON·알 수 없는 키·잘못된 ROI(NaN/Inf/음수)·잘못된 hex 400, 큐 초과 429, 정상 202, GET / 에 토큰 치환, /state JSON, /frame.jpg 의 X-Frame-Meta 형식을 검증하라. mode_*의 정상 수락과 금지 모드(AUTO/TAKEOFF/MISSION)·잘못된 기체 키·만료 티켓 거부도 포함하라.
+- tests/test_tracking_html.py: tracking_dashboard.html에 외부 URL(http/https), 외부 폰트·스크립트·이미지 참조가 없는지, __DASHBOARD_TOKEN__ 자리표시자가 정확히 1개인지, 페이지가 사용하는 state 키(app, banner, video, tracking, simulation, vehicle, modes, sentinel, events)가 TrackingService.snapshot()이 실제로 만드는 키와 일치하는지 검사하라.
+- 빌드 산출물 검사: Linker_mac.spec의 datas/hiddenimports에 tracking_dashboard.html과 tracking_* 모듈, dashboard_server, flight_mode_controller가 모두 들어 있는지 확인하는 테스트를 추가하라.
+
+3. [P1] ROI 선택 사용성
+- tracking_session.py의 SELECTION_WINDOW_S=3.0 때문에 ROI 선택 버튼을 누른 뒤 3초 안에 드래그를 끝내지 않으면 selection_frame_expired_reselect로 거부된다. 실제 조작에는 짧다.
+- 선택 창을 설정 가능하게 하라(기본 8초, 범위 2~20초, 유한값 검증). 고정 프레임 이후 누적 catch-up 프레임(CATCHUP_MAX=12, 가득 차면 솎아냄)이 길어질수록 초기화 실패 위험이 커지므로, 경과 시간이 길면 catch-up 대신 "최신 프레임에서 다시 그리기"를 안내하는 정책을 명시하고 테스트하라. 다른 객체로 자동 전환하지 말라.
+- PyQt 창과 브라우저 모두 선택 중 남은 시간(카운트다운)을 크게 표시하라.
+- 민무늬 영역 거부(insufficient_texture) 시 "무늬가 뚜렷한 곳(모서리·글자·경계)을 선택하세요"처럼 행동 지침을 함께 표시하라.
+
+4. [P1] PyQt Tracking 창 표시 개선(사용자는 심한 난시가 있다. 큰 글씨·높은 대비·굵은 글꼴을 우선한다)
+- 현재 상태줄이 "STOPPED / source_changed" 같은 내부 코드를 그대로 보여준다. tracking_service.reason_text()로 한국어 사유를 표시하고, 원래 코드는 툴팁에만 둬라.
+- 상태(IDLE/SELECTING/TRACKING/LOST/STOPPED/ERROR)를 큰 글씨·색상 배지로 분리하고, 품질·유지시간·처리 FPS·영상 오차·프레임 나이를 각각의 라벨로 나눠라. 긴 한 줄 텍스트와 dict 문자열 출력(telemetry_text의 str(values))을 없애고 항목별 표로 바꿔라. 미수신 —, 오래된 값 STALE 규칙은 유지하라.
+- 브라우저 대시보드의 배너 문구(service.banner)를 PyQt 창 상단에도 같은 색 규칙으로 표시하라.
+- 기존 앱 테마(gui_theme.py)를 따르되 상태 색은 TRACKING=초록, SELECTING=노랑, LOST/ERROR=빨강, SIMULATION=보라로 통일하라.
+- 카메라 장치(정수 인덱스)나 파일 소스를 선택하면 tcp/udp 선택을 비활성화하라(RTSP에만 의미가 있음).
+- 브라우저 대시보드를 열면 창 하단에 URL과 "같은 추적 세션 공유 중"을 표시하고, 닫기/다시 열기 버튼을 제공하라.
+
+5. [P1] 일관성·정리
+- 합성 모의 영상에서 상단 표시는 SIMULATION인데 service.banner()는 "MONITOR ONLY"를 쓴다. demo 또는 sink.enabled이면 배너도 SIMULATION으로 표시하라(app.monitor와 같은 규칙 하나로 통일).
+- PyQt 창을 닫을 때 브라우저 대시보드가 열려 있으면 세션을 유지하고 있다. 이 동작을 창 닫기 시 확인 문구로 알리고, 대시보드도 함께 닫는 선택지를 제공하라.
+- 대시보드 기본 포트 8766이 사용 중이면 임의 포트로 바뀐다. 실제 URL을 PyQt 창과 이벤트 로그에 표시하라(이미 로그는 있음).
+- 폴더 정리: 루트의 .lk_stage.tgz(검증용 임시 압축파일)는 삭제 대상으로 보고만 하라(직접 삭제는 사용자 확인 후). .gitignore에 tracking_backup*/, tracking_validation/, *.tgz, .DS_Store 추가를 제안하고, spec이 백업 폴더를 번들에 넣지 않는지 확인하라.
+
+6. [P2] 성능·실영상 준비
+- _publish_web()은 Qt 스레드에서 cv2.imencode를 최대 10Hz로 수행하고, PyQt 창은 새 프레임마다 cvtColor로 전체 해상도 변환을 한다. 1080p·4K 소스에서 UI 스레드 시간을 측정(프레임당 ms)해 보고하라. 33ms 예산을 넘으면 JPEG 인코딩을 별도 워커(최신 1개 슬롯)로 옮기고, 표시용 변환은 표시 크기로 축소한 뒤 수행하라. 추적 입력 해상도는 바꾸지 말라.
+- 현재 확인된 실제 입력은 카메라 장치 0(노트북/USB)이다. HM30 RTSP 실영상, 지연(프레임 나이) 분포, timeout 0.3초 적정성은 아직 검증되지 않았다. 녹화 파일 재생 기반 측정 도구(tools/에 스크립트)를 추가해 프레임 나이·처리 FPS·LOST 사유 분포를 CSV로 남기게 하라. 실제 HM30 연결은 자동으로 하지 말라.
+
+7. [P1] 영상 단일 수신 구조 — HM30 무선 링크에는 RTSP 1개만
+배경(직접 확인된 사실)
+- Linker 안에서는 Fly / Video 4CH / Tracking이 같은 주소면 _SharedCapture 디코더 1개를 공유한다. 브라우저(Tracking 대시보드, Sentinel Legacy drive 대시보드)는 카메라에 직접 붙지 않고 Linker가 만든 JPEG를 loopback HTTP로 받는다.
+- 별도 앱 WOW Sentinel(/Users/kimmunju/workspace/sentinel, track.py)은 같은 카메라에 자기 RTSP 연결을 따로 연다(OPENCV_FFMPEG_CAPTURE_OPTIONS rtsp_transport;tcp|fflags;nobuffer).
+- 따라서 운용 시 HM30 무선 링크로 같은 영상이 최소 2번 흐른다. HM30 사용자·제조사 포럼에서는 카메라 RTSP를 여러 클라이언트가 직접 열면 무선 부하가 늘고 안정 스트림이 1개로 줄며 통신 거리가 감소한다는 보고가 있다. 추적 비행(Sentinel)은 영상 지연에 가장 민감하다.
+- Sentinel 소스는 이번에도 수정하지 않는다. Sentinel의 영상 주소는 사용자가 Sentinel 화면의 소스 입력란에서 바꾼다.
+
+목표 구조
+  카메라 ─(HM30, RTSP 1개, TCP)─▶ GCS Mac의 로컬 RTSP 중계(mediamtx 등)
+                                   ├─▶ Linker (공유 디코더 1개) ─▶ 브라우저들(JPEG, 관찰용)
+                                   └─▶ Sentinel (객체 추적·추적 비행)
+
+7-1. 로컬 중계 구성(Linker_mac/tools/video_relay/)
+- mediamtx를 우선 후보로 하되 자동 설치하지 말라. 설치 여부와 버전을 확인하고, 없으면 설치 명령(예: brew)만 보고하라. 설치된 버전의 공식 설정 키 이름을 확인한 뒤 설정 파일을 작성하라(기억에 의존한 키 이름 금지).
+- 설정 요구사항: 중계 서버는 127.0.0.1에만 바인드. 카메라→중계 구간은 TCP로 수신(H.265를 UDP로 받으면 RTP 패킷 크기 오류 사례가 있음). 사용하지 않는 프로토콜(RTMP/HLS/WebRTC/SRT 등)은 끈다. 카메라 주소는 설정 파일에 직접 박지 말고 실행 인자나 별도 로컬 설정에서 받으며, 비밀번호가 있으면 로그·화면·문서에서 가린다(mask_url 규칙). 중계 경로 이름은 하나로 고정(예: rtsp://127.0.0.1:8554/cam).
+- 시작/정지 스크립트(video_relay_start.command, video_relay_stop.command)와 상태 확인 방법을 제공하라. Linker가 중계 서버를 자동 실행하지는 말라(시작 시 자동 연결 금지 원칙 유지).
+- 중계 서버가 카메라 연결을 잃었다가 복구될 때 Linker 쪽에서 session_id가 바뀌고 이전 추적이 폐기되는지(기존 재연결 규칙) 녹화 파일 기반 중계로 시험하라.
+
+7-2. Linker 쪽 보완
+- 영상 소스 프리셋에 "로컬 중계(권장)" 항목을 추가하라. 실제 HM30 주소라고 단정하지 말고, 중계 서버가 꺼져 있으면 연결 실패 사유를 명확히 표시하라.
+- _SharedCapture pool key 정규화: 스킴·호스트 대소문자, 기본 포트 생략/명시, 끝의 '/' 차이 때문에 같은 카메라에 디코더가 2개 생기지 않게 하라. 자격증명 포함 여부가 다른 같은 주소의 처리 규칙을 명시하고 테스트하라.
+- 동일 호스트(같은 카메라 IP)로 RTSP 연결이 2개 이상 열리면 PyQt 창과 이벤트 로그에 "같은 카메라에 직접 연결 n개 · 무선 링크 부하 증가 · 로컬 중계 사용 권장" 경고를 표시하라. Linker가 아는 범위(자기 pool)만 판단하고 Sentinel 연결 수를 추정해서 단정하지 말라.
+- 디코딩 지연 누적 감지: 디코더의 실제 수신 FPS가 소스 FPS보다 지속적으로 낮거나(예: 5초 이상 80% 미만) read() 간격이 비정상적으로 몰려 들어오면(버스트) "디코딩 밀림·지연 누적 가능" 경고를 표시하라. 임계값은 설정 가능하게 하고 합성 시험으로 검증하라.
+- Tracking 창·브라우저 대시보드의 영상 상태에 "직접 연결 / 로컬 중계" 경로를 표시하라.
+
+7-3. 브라우저 영상 표시 원칙
+- 브라우저 영상(Tracking·Sentinel Legacy 대시보드)은 JPEG 스냅샷(최대 약 10장/초)이며 앱 창보다 늦다. 브라우저 영상 위에 "관찰용 · 조종 판단에 사용 금지" 표시와 브라우저 기준 영상 나이(앱 수신 시각 → 브라우저 표시까지)를 항상 표시하라.
+- 여러 탭·여러 대시보드가 열려도 JPEG 인코딩은 대시보드당 한 번(최신 1개 캐시)만 하고 탭 수에 비례해 늘지 않음을 테스트로 증명하라. 아무 탭도 프레임을 요청하지 않으면 인코딩을 멈추는 기존 동작(FRAME_INTEREST_S)을 유지하라.
+- Tracking 대시보드와 Sentinel Legacy drive 대시보드가 동시에 열려 있을 때 Qt 스레드 인코딩 시간 합계를 측정해 6단계 성능 표에 포함하라.
+
+7-4. 비교 측정 절차와 기록(docs/video_relay.md 신규)
+- 아래 3가지 구성을 같은 카메라·HM30·해상도·코덱으로 비교하는 절차를 문서화하라.
+  ① 직접 연결 1개(Linker만) ② 직접 연결 2개(Linker + Sentinel 동시) ③ 로컬 중계 경유(Linker + Sentinel)
+- 지연 측정은 Sentinel의 기존 도구 tools/measure_video_latency.py를 읽기 전용으로 사용하는 방법을 적어라(Sentinel 소스 수정 금지). Linker 쪽에는 프레임 나이·수신 FPS·끊김 횟수·재연결 횟수를 CSV로 남기는 측정 스크립트를 tools/에 추가하라.
+- 기록 표: 날짜, 카메라, 해상도/코덱/비트레이트, 구성(①②③), 거리, 지연 중앙값/최소/최대, 끊김·깨짐 횟수, 재연결 횟수, 비고. 실측 전에는 "미측정"으로 두고 추정값을 넣지 말라.
+- 실측 결과에 따라 중계 사용을 운용 기본값으로 할지는 사용자가 결정한다. 문서에 결정 칸을 둬라.
+
+금지 사항(유지)
+- send_virtual_rc, arm/disarm, takeoff, RC_CHANNELS_OVERRIDE, SET_ATTITUDE_TARGET, SET_POSITION_TARGET_*를 Tracking과 연결하지 말라. 비행 파라미터·failsafe를 바꾸지 말라.
+- bbox에 가짜 위경도·거리를 붙여 Guide/Sentinel 메시지로 내보내지 말라. YOLO·PyTorch·모델 다운로드·온라인 학습 추적기를 추가하지 말라.
+- 생성된 wow_guide_mavlink.py, protocol XML, Sentinel 외부 소스를 수정하지 말라.
+
+완료 보고
+- 실제 변경 파일, 1단계 브라우저 모드 변경의 허용/금지 범위와 남은 위험, 추가·수정한 테스트와 모듈별 실행 결과(통과/실패/스킵 이유)를 제시하라.
+- PyQt Tracking 창과 브라우저 대시보드의 오프스크린 캡처를 tracking_validation/에 저장하라.
+- 6단계 성능 측정값(해상도별 UI 스레드 ms, 대시보드 동시 사용 시 포함)을 표로 제시하라.
+- 7단계: 중계 서버 설치 여부·버전, 작성한 설정·스크립트, 녹화 파일 기반 중계 시험 결과를 제시하고, HM30 실기 비교 측정(①②③)은 아직 수행하지 않았다면 "미측정"으로 명시하라.
+- 합성 영상·녹화 영상 검증과 실제 HM30·SITL 검증을 구분하고, 실기 제어는 미구현임을 명시하라. 비행 준비 완료라고 선언하지 말라.
+- 관련 없는 파일/사용자 변경을 건드리지 말고, 실제 수행한 범위만 완료로 보고하라.

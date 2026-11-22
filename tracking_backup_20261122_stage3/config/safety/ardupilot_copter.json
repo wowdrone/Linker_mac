@@ -1,0 +1,204 @@
+{
+  "name": "기준값 미설정",
+  "firmware": "ardupilot_copter",
+  "items": [
+    {
+      "id": "FENCE_ENABLE",
+      "group": "지오펜스",
+      "parameter": "FENCE_ENABLE",
+      "description": "지오펜스 사용",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FENCE_TYPE",
+      "group": "지오펜스",
+      "parameter": "FENCE_TYPE",
+      "description": "지오펜스 유형",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FENCE_ALT_MAX",
+      "group": "지오펜스",
+      "parameter": "FENCE_ALT_MAX",
+      "description": "최대 고도",
+      "unit": "m",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FENCE_RADIUS",
+      "group": "지오펜스",
+      "parameter": "FENCE_RADIUS",
+      "description": "반경",
+      "unit": "m",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FENCE_ACTION",
+      "group": "지오펜스",
+      "parameter": "FENCE_ACTION",
+      "description": "지오펜스 이탈 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FENCE_MARGIN",
+      "group": "지오펜스",
+      "parameter": "FENCE_MARGIN",
+      "description": "경계 여유",
+      "unit": "m",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "RTL_ALT",
+      "group": "RTL",
+      "parameter": "RTL_ALT",
+      "description": "귀환 고도",
+      "unit": "cm",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "RTL_ALT_FINAL",
+      "group": "RTL",
+      "parameter": "RTL_ALT_FINAL",
+      "description": "최종 귀환 고도",
+      "unit": "cm",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "RTL_SPEED",
+      "group": "RTL",
+      "parameter": "RTL_SPEED",
+      "description": "귀환 속도",
+      "unit": "cm/s",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "RTL_LOIT_TIME",
+      "group": "RTL",
+      "parameter": "RTL_LOIT_TIME",
+      "description": "귀환 대기 시간",
+      "unit": "ms",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FS_THR_ENABLE",
+      "group": "페일세이프",
+      "parameter": "FS_THR_ENABLE",
+      "description": "조종기 신호 상실 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FS_THR_VALUE",
+      "group": "페일세이프",
+      "parameter": "FS_THR_VALUE",
+      "description": "조종기 신호 상실 기준",
+      "unit": "PWM",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FS_GCS_ENABLE",
+      "group": "페일세이프",
+      "parameter": "FS_GCS_ENABLE",
+      "description": "GCS 신호 상실 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FS_EKF_ACTION",
+      "group": "페일세이프",
+      "parameter": "FS_EKF_ACTION",
+      "description": "EKF 이상 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "FS_EKF_THRESH",
+      "group": "페일세이프",
+      "parameter": "FS_EKF_THRESH",
+      "description": "EKF 이상 임계값",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BATT_FS_LOW_ACT",
+      "group": "배터리",
+      "parameter": "BATT_FS_LOW_ACT",
+      "description": "배터리 부족 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BATT_FS_CRT_ACT",
+      "group": "배터리",
+      "parameter": "BATT_FS_CRT_ACT",
+      "description": "배터리 위험 동작",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BATT_LOW_VOLT",
+      "group": "배터리",
+      "parameter": "BATT_LOW_VOLT",
+      "description": "배터리 부족 전압",
+      "unit": "V",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BATT_CRT_VOLT",
+      "group": "배터리",
+      "parameter": "BATT_CRT_VOLT",
+      "description": "배터리 위험 전압",
+      "unit": "V",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BATT_LOW_MAH",
+      "group": "배터리",
+      "parameter": "BATT_LOW_MAH",
+      "description": "배터리 부족 용량",
+      "unit": "mAh",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "BATT_CRT_MAH",
+      "group": "배터리",
+      "parameter": "BATT_CRT_MAH",
+      "description": "배터리 위험 용량",
+      "unit": "mAh",
+      "severity": "warn",
+      "criteria": null
+    },
+    {
+      "id": "ARMING_CHECK",
+      "group": "시동 점검",
+      "parameter": "ARMING_CHECK",
+      "description": "시동 전 점검",
+      "unit": "",
+      "severity": "warn",
+      "criteria": null
+    }
+  ]
+}

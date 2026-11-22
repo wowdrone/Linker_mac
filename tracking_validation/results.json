@@ -1,0 +1,296 @@
+[
+  {
+    "module": "test_ai_tuner",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_ai_tuner.py"
+    ]
+  },
+  {
+    "module": "test_build_spec",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_build_spec.py"
+    ]
+  },
+  {
+    "module": "test_drive_dashboard",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_drive_dashboard.py"
+    ]
+  },
+  {
+    "module": "test_flight_actions",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_flight_actions.py"
+    ]
+  },
+  {
+    "module": "test_flight_mode_controller",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_flight_mode_controller.py"
+    ]
+  },
+  {
+    "module": "test_gui_guides",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_gui_guides.py"
+    ]
+  },
+  {
+    "module": "test_guide_stage1",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_guide_stage1.py"
+    ]
+  },
+  {
+    "module": "test_health_data",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_health_data.py"
+    ]
+  },
+  {
+    "module": "test_safety_parameters",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_safety_parameters.py"
+    ]
+  },
+  {
+    "module": "test_safety_validation",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_safety_validation.py"
+    ]
+  },
+  {
+    "module": "test_sentinel_compat",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_sentinel_compat.py"
+    ]
+  },
+  {
+    "module": "test_shared_video",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_shared_video.py"
+    ]
+  },
+  {
+    "module": "test_tracking_core",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_core.py"
+    ]
+  },
+  {
+    "module": "test_tracking_dashboard",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_dashboard.py"
+    ]
+  },
+  {
+    "module": "test_tracking_html",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_html.py"
+    ]
+  },
+  {
+    "module": "test_tracking_main_window",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_main_window.py"
+    ]
+  },
+  {
+    "module": "test_tracking_replay",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_replay.py"
+    ]
+  },
+  {
+    "module": "test_tracking_service",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_service.py"
+    ]
+  },
+  {
+    "module": "test_tracking_session",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_session.py"
+    ]
+  },
+  {
+    "module": "test_tracking_ui",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tracking_ui.py"
+    ]
+  },
+  {
+    "module": "test_video_relay",
+    "returncode": 0,
+    "command": [
+      "/Users/kimmunju/workspace/Linker_mac/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_video_relay.py"
+    ]
+  }
+]

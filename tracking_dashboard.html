@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linker Tracking / Telemetry</title>
+<style>
+/* Linker Tracking browser view. Self-contained: no external fonts, scripts or images.
+   Layout: header (mode + links) / banner / [video + controls | tracking metrics + vehicle + mode + events]. */
+:root {
+  --bg:#0e1118; --header:#171b24; --panel:#1d222c; --field:#131821; --border:#3a4352;
+  --text:#f5f6fa; --muted:#b4bccb; --accent:#ffce35; --accent-text:#1c1808;
+  --ok:#39e19a; --info:#7cc8ff; --warn:#ffae4d; --danger:#ff5a78; --sim:#c49bff;
+  --radius:12px; --btn:8px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Segoe UI","Malgun Gothic",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); font-size:15px; line-height:1.45; }
+button { font:inherit; }
+header { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:12px 18px; background:var(--header); border-bottom:2px solid var(--accent); }
+.brand { font-size:22px; font-weight:800; letter-spacing:-.01em; }
+.brand span { color:var(--accent); }
+.chip { display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:999px; border:2px solid var(--border); font-weight:700; font-size:14px; background:var(--field); }
+.chip i { width:11px; height:11px; border-radius:50%; background:var(--muted); flex:none; }
+.chip[data-tone="ok"] { border-color:var(--ok); } .chip[data-tone="ok"] i { background:var(--ok); }
+.chip[data-tone="warn"] { border-color:var(--warn); } .chip[data-tone="warn"] i { background:var(--warn); }
+.chip[data-tone="danger"] { border-color:var(--danger); } .chip[data-tone="danger"] i { background:var(--danger); }
+.chip[data-tone="sim"] { border-color:var(--sim); } .chip[data-tone="sim"] i { background:var(--sim); }
+.chip[data-tone="accent"] { border-color:var(--accent); color:var(--accent); } .chip[data-tone="accent"] i { background:var(--accent); }
+.spacer { flex:1; }
+#banner { margin:14px 18px 0; padding:12px 16px; border-radius:var(--radius); font-size:17px; font-weight:700; border:2px solid var(--border); background:var(--panel); }
+#banner[data-level="ok"] { border-color:var(--ok); color:var(--ok); }
+#banner[data-level="warn"] { border-color:var(--warn); color:var(--warn); }
+#banner[data-level="danger"] { border-color:var(--danger); color:#fff; background:#5a1424; }
+#banner[data-level="info"] { border-color:var(--info); color:var(--info); }
+main { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(340px,1fr); gap:16px; padding:16px 18px 24px; }
+@media (max-width:1050px) { main { grid-template-columns:1fr; } }
+.card { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+.card + .card { margin-top:16px; }
+.card h2 { margin:0 0 10px; font-size:15px; font-weight:800; color:var(--accent); letter-spacing:.02em; }
+.stage { position:relative; background:#000; border-radius:10px; overflow:hidden; aspect-ratio:4/3; max-height:68vh; width:100%; }
+.stage canvas { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+.stage.selecting { outline:3px dashed var(--accent); outline-offset:-3px; }
+.stage.selecting canvas { cursor:crosshair; }
+#novideo { position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); font-size:18px; font-weight:700; text-align:center; padding:20px; }
+.frameinfo { display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:8px; font-family:var(--mono); font-size:13px; color:var(--muted); }
+.frameinfo b { color:var(--text); font-weight:700; }
+.controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.controls .sep { width:2px; background:var(--border); margin:0 4px; }
+.btn { padding:10px 15px; min-height:44px; border-radius:var(--btn); border:2px solid var(--border); background:var(--field); color:var(--text); font-weight:700; cursor:pointer; }
+.btn:hover:not(:disabled) { border-color:var(--accent); }
+.btn:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.btn.primary { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+.btn.danger { border-color:var(--danger); color:#fff; background:#4a1220; }
+.btn.sim { border-color:var(--sim); color:var(--sim); }
+.result { margin-top:10px; font-size:14px; color:var(--muted); } .result b { color:var(--text); }
+.state-big { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.state-big .s { font-size:34px; font-weight:900; letter-spacing:-.01em; }
+.state-big .r { font-size:16px; font-weight:700; color:var(--muted); }
+.s[data-s="TRACKING"] { color:var(--ok); } .s[data-s="LOST"],.s[data-s="ERROR"] { color:var(--danger); }
+.s[data-s="SELECTING"] { color:var(--accent); } .s[data-s="IDLE"],.s[data-s="STOPPED"] { color:var(--info); }
+dl.kv { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; margin:10px 0 0; }
+dl.kv dt { color:var(--muted); font-weight:600; }
+dl.kv dd { margin:0; font-weight:700; font-family:var(--mono); font-size:14px; word-break:break-all; }
+dd .stale { color:var(--warn); font-family:var(--font); font-size:12px; font-weight:800; margin-left:6px; padding:1px 6px; border:1px solid var(--warn); border-radius:5px; }
+.note { color:var(--muted); font-size:12.5px; margin-top:8px; }
+#track { width:100%; height:170px; display:block; background:var(--field); border-radius:8px; margin-top:10px; }
+.modes { display:flex; flex-wrap:wrap; gap:6px; }
+.modes .btn { min-height:38px; padding:6px 11px; font-size:13.5px; font-family:var(--mono); }
+.modes .btn.current { border-color:var(--ok); color:var(--ok); }
+#confirm { display:none; margin-top:12px; padding:14px; border-radius:10px; border:3px solid var(--warn); background:#2b2112; }
+#confirm.show { display:block; }
+#confirm h3 { margin:0 0 8px; font-size:18px; color:var(--warn); }
+#confirm ul { margin:8px 0; padding-left:20px; } #confirm li { margin:3px 0; font-weight:600; }
+#cf-armed { display:none; margin:10px 0; padding:12px 14px; border-radius:8px; background:#5a1424; border:3px solid var(--danger); color:#fff; font-size:22px; font-weight:900; line-height:1.3; }
+#cf-armed.show { display:block; }
+#confirm.armed { border-color:var(--danger); background:#2a0f17; }
+#countdown { display:none; margin-top:10px; padding:10px 14px; border-radius:10px; border:3px solid var(--accent); color:var(--accent); font-size:26px; font-weight:900; }
+#countdown.show { display:block; }
+#countdown small { display:block; font-size:15px; font-weight:700; color:var(--text); margin-top:2px; }
+#confirm label { display:flex; gap:9px; align-items:center; font-weight:700; margin:10px 0; cursor:pointer; }
+#confirm input { width:20px; height:20px; accent-color:var(--warn); }
+#events { list-style:none; margin:0; padding:0; max-height:300px; overflow:auto; font-size:13.5px; }
+#events li { display:grid; grid-template-columns:62px 46px 1fr; gap:8px; padding:5px 0; border-bottom:1px solid #2a303c; }
+#events .t { font-family:var(--mono); color:var(--muted); } #events .k { font-weight:800; color:var(--accent); }
+#events li[data-level="warn"] .x { color:var(--warn); } #events li[data-level="danger"] .x { color:var(--danger); font-weight:700; }
+.offline header { border-bottom-color:var(--danger); }
+/* On-demand guides (UI guide principle): hidden until "?" or the header "가이드" button. */
+.cardhead { display:flex; align-items:center; gap:10px; margin:0 0 10px; }
+.cardhead h2 { margin:0; }
+button.help { width:36px; height:36px; flex:none; border-radius:50%; border:2px solid var(--accent); background:var(--field); color:var(--accent); font-size:19px; font-weight:900; cursor:pointer; line-height:1; }
+button.help[aria-expanded="true"] { background:var(--accent); color:var(--accent-text); }
+button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+.helpbox { margin:0 0 12px; padding:12px 16px; border:2px solid var(--accent); border-radius:10px; background:#211d0d; }
+.helpbox ul { margin:0; padding-left:20px; }
+.helpbox li { font-size:16px; font-weight:700; line-height:1.5; color:#fff; margin:4px 0; }
+#guide-all { min-height:40px; }
+.warnings { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+.warnings div { padding:8px 12px; border-radius:8px; border:2px solid var(--warn); color:var(--warn); font-weight:800; font-size:15px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Linker <span>Tracking</span> / Telemetry</div>
+  <span class="chip" id="c-monitor" data-tone="accent"><i></i><span>MONITOR ONLY</span></span>
+  <div class="spacer"></div>
+  <button class="btn" id="guide-all" type="button" aria-expanded="false">가이드</button>
+  <span class="chip" id="c-app"><i></i><span>앱 연결 확인 중</span></span>
+  <span class="chip" id="c-video"><i></i><span>영상 —</span></span>
+  <span class="chip" id="c-pixhawk"><i></i><span>Pixhawk —</span></span>
+  <span class="chip" id="c-sentinel"><i></i><span>Sentinel —</span></span>
+</header>
+<div id="banner" data-level="info" role="status" aria-live="polite">상태 수신 대기</div>
+
+<main>
+  <section>
+    <div class="card">
+      <div class="cardhead"><h2>영상</h2><button class="help" type="button" aria-label="영상 가이드" aria-expanded="false" aria-controls="help-video">?</button></div>
+      <div class="helpbox" id="help-video" hidden><ul>
+        <li>ROI 선택 → 고정된 프레임 위를 드래그. 영상 여백은 선택되지 않습니다. Esc = 선택 취소.</li>
+        <li>이 화면은 영상 관찰만 합니다. 추적 결과로 기체를 조종하지 않습니다.</li>
+        <li>ROI는 무늬가 뚜렷한 곳(모서리·글자·경계)을 선택하세요. 민무늬 영역은 「ROI 텍스처 부족」으로 거부됩니다.</li>
+        <li>선택 시간(기본 8초) 안에 그립니다. 고정 후 4초 안에 그리면 그 사이 프레임을 따라잡아 최신 프레임까지 추적합니다. 4초가 지나거나 따라잡기에 실패하면 최신 프레임이 다시 고정되며, 그 프레임에서 다시 그리세요. 다른 객체로 자동 전환하지 않습니다.</li>
+        <li>브라우저 영상은 Linker가 만든 JPEG 스냅샷(최대 약 10장/초)이라 앱 창보다 늦습니다. 「브라우저 영상 나이」는 앱 수신 시각부터 이 화면에 표시될 때까지의 시간입니다.</li>
+        <li>경로: 「로컬 중계」는 이 Mac의 중계 서버(rtsp://127.0.0.1:8554/cam)를 거친 영상, 「직접 연결」은 카메라에 직접 연결한 영상입니다. 같은 카메라에 직접 연결이 여러 개면 무선 링크 부하가 늘어납니다.</li>
+        <li>영상 연결은 Linker 앱에 저장된 기존 Fly/CH1 주소로만 연결합니다.</li>
+      </ul></div>
+      <div class="stage" id="stage">
+        <canvas id="view" aria-label="추적 영상"></canvas>
+        <div id="novideo">영상 프레임 없음</div>
+      </div>
+      <div id="countdown" role="timer" aria-live="polite"></div>
+      <div class="frameinfo">
+        <span>source <b id="f-src">—</b></span><span>session <b id="f-ses">—</b></span>
+        <span>seq <b id="f-seq">—</b></span><span>해상도 <b id="f-res">—</b></span>
+        <span>프레임 나이 <b id="f-age">—</b></span><span>수신 FPS <b id="f-fps">—</b></span>
+        <span>경로 <b id="f-route">—</b></span><span>브라우저 영상 나이 <b id="f-bage">—</b></span>
+        <span>재연결 <b id="f-rec">—</b></span>
+      </div>
+      <div class="warnings" id="warnings" role="status" aria-live="polite"></div>
+      <div class="controls">
+        <button class="btn" data-cmd="video_connect">영상 연결</button>
+        <button class="btn" data-cmd="video_disconnect">영상 해제</button>
+        <button class="btn sim" data-cmd="demo">합성 모의 영상</button>
+        <span class="sep"></span>
+        <button class="btn primary" id="b-select" data-cmd="begin_selection">ROI 선택</button>
+        <button class="btn" id="b-cancel" data-cmd="cancel_selection">선택 취소</button>
+        <button class="btn" data-cmd="stop">추적 정지</button>
+        <button class="btn danger" data-cmd="intervention">조종자 개입</button>
+        <span class="sep"></span>
+        <button class="btn sim" id="b-sim" data-cmd="simulate">모의 출력 허용</button>
+        <button class="btn" id="b-unsim" data-cmd="revoke_simulation">모의 출력 해제</button>
+      </div>
+      <div class="result">마지막 요청 · <b id="web-result">—</b></div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card">
+      <div class="cardhead"><h2>추적 상태</h2><button class="help" type="button" aria-label="추적 상태 가이드" aria-expanded="false" aria-controls="help-track">?</button></div>
+      <div class="helpbox" id="help-track" hidden><ul>
+        <li>품질은 남아 있는 특징점·이동 일관성 지표이며 객체 확률이 아닙니다.</li>
+        <li>영상 오차는 오른쪽·아래가 양수입니다. 각도·거리가 아닙니다.</li>
+        <li>LOST는 새 영상이 들어와도 자동 재개되지 않습니다. ROI를 다시 선택해야 합니다.</li>
+        <li>모의 출력은 메모리 기록일 뿐 비행 명령이 아닙니다.</li>
+      </ul></div>
+      <div class="state-big"><span class="s" id="t-state" data-s="IDLE">—</span><span class="r" id="t-reason">—</span></div>
+      <dl class="kv">
+        <dt>품질(잔존 특징점)</dt><dd id="t-q">—</dd>
+        <dt>유지 시간</dt><dd id="t-hold">—</dd>
+        <dt>처리 FPS</dt><dd id="t-pfps">—</dd>
+        <dt>영상 오차 (x, y)</dt><dd id="t-err">—</dd>
+        <dt>bbox</dt><dd id="t-bbox">—</dd>
+        <dt>클래스</dt><dd id="t-class">—</dd>
+        <dt>timeout</dt><dd id="t-timeout">—</dd>
+        <dt>모의 출력</dt><dd id="t-sim">—</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h2>선택 기체 (읽기 전용)</h2><button class="help" type="button" aria-label="선택 기체 가이드" aria-expanded="false" aria-controls="help-veh">?</button></div>
+      <div class="helpbox" id="help-veh" hidden><ul>
+        <li>기체 선택은 Linker 메인 창의 Fleet 또는 상단 기체 목록에서 합니다.</li>
+        <li>미수신 값은 —, 3초보다 오래된 값은 STALE로 표시합니다.</li>
+        <li>위치 궤적은 기체 GPS 위치만 표시합니다. 추적 객체의 위치가 아닙니다.</li>
+      </ul></div>
+      <dl class="kv" id="veh"></dl>
+      <canvas id="track" aria-label="최근 위치 궤적"></canvas>
+      <div class="note" id="alt-note">—</div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h2>비행 모드 변경</h2><button class="help" type="button" aria-label="비행 모드 가이드" aria-expanded="false" aria-controls="help-mode">?</button></div>
+      <div class="helpbox" id="help-mode" hidden><ul>
+        <li>모드 요청은 ARM·이륙·미션을 수행하지 않고 자동 재시도하지 않습니다. 결과는 기체 HEARTBEAT로 확인합니다.</li>
+        <li>모드를 누르면 확인 패널이 열리고, 체크 후 「요청 1회 송신」을 눌러야 송신됩니다. 송신 직전 기체·연결·HEARTBEAT·현재 모드·시동 상태를 다시 확인합니다.</li>
+        <li>(비활성) 모드는 이 화면에서 요청하지 않습니다. 버튼에 마우스를 올리면 이유가 보입니다.</li>
+        <li>한 번에 하나의 요청만 유효합니다. 다른 화면에서 새로 요청하면 이전 확인 요청은 무효가 됩니다.</li>
+        <li>이 대시보드는 이 Mac(127.0.0.1)에서만 열립니다. 사용 후 Linker의 「대시보드 닫기」로 끄세요.</li>
+      </ul></div>
+      <div class="modes" id="modes"></div>
+      <div class="note" id="mode-state">—</div>
+      <div id="confirm" role="alertdialog" aria-labelledby="cf-title">
+        <h3 id="cf-title">모드 변경 확인</h3>
+        <div id="cf-target" style="font-family:var(--mono);font-weight:700;font-size:16px"></div>
+        <div id="cf-armed">ARMED · 비행 중일 수 있습니다. 승인 즉시 기체 거동이 바뀝니다.</div>
+        <ul id="cf-impact"></ul>
+        <label><input type="checkbox" id="cf-check"> 기체·현재 모드·영향을 확인했습니다</label>
+        <div class="controls" style="margin-top:4px">
+          <button class="btn primary" id="cf-ok" disabled>요청 1회 송신</button>
+          <button class="btn" id="cf-no">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h2>이벤트</h2><button class="help" type="button" aria-label="이벤트 가이드" aria-expanded="false" aria-controls="help-events">?</button></div>
+      <div class="helpbox" id="help-events" hidden><ul>
+        <li>최근 이벤트 40건입니다. 주황은 경고, 빨강은 상실·오류입니다.</li>
+        <li>전체 기록은 Linker Tracking 창의 「로그 저장」 JSON에 남습니다(모드 요청 감사 기록 포함).</li>
+      </ul></div>
+      <ul id="events"></ul>
+    </div>
+  </aside>
+</main>
+
+<script>
+'use strict';
+const token = '__DASHBOARD_TOKEN__';
+const $ = id => document.getElementById(id);
+const dash = '—';
+let state = null, meta = null, bitmap = null, drag = null, offline = false;
+
+function txt(id, value) { const el = $(id); const v = value == null || value === '' ? dash : String(value); if (el.textContent !== v) el.textContent = v; }
+function chip(id, tone, label) { const el = $(id); el.dataset.tone = tone || ''; el.lastElementChild.textContent = label; }
+function short(id) { return id ? String(id).slice(0, 8) : dash; }
+function num(v, unit = '', digits) { return v == null ? dash : (digits == null ? v : Number(v).toFixed(digits)) + unit; }
+
+async function post(command) {
+  try {
+    const r = await fetch('/command', {method:'POST', headers:{'Content-Type':'application/json','X-Dashboard-Token':token},
+      body:JSON.stringify(command)});
+    if (!r.ok) txt('web-result', r.status === 429 ? '요청이 밀려 있습니다 · 잠시 후 다시' : `요청 거부 (${r.status})`);
+  } catch (e) { txt('web-result', '앱에 연결할 수 없습니다'); }
+}
+document.querySelectorAll('[data-cmd]').forEach(b => b.addEventListener('click', () => post({action:b.dataset.cmd})));
+addEventListener('keydown', e => { if (e.key === 'Escape' && state && state.tracking.state === 'SELECTING') { drag = null; post({action:'cancel_selection'}); } });
+
+/* ---------------- state ---------------- */
+async function pollState() {
+  try {
+    const r = await fetch('/state', {headers:{'X-Dashboard-Token':token}, cache:'no-store'});
+    if (!r.ok) throw new Error(r.status);
+    state = await r.json(); offline = false;
+    if (!state.standby) render();
+    else { txt('banner', '앱 초기화 중'); }
+  } catch (e) {
+    offline = true;
+    $('banner').dataset.level = 'danger';
+    txt('banner', '앱과 연결이 끊겼습니다 · 표시된 값은 최신이 아닙니다');
+    chip('c-app', 'danger', '앱 연결 끊김');
+  }
+  document.body.classList.toggle('offline', offline);
+  setTimeout(pollState, 250);
+}
+
+function render() {
+  const s = state, v = s.video, t = s.tracking, veh = s.vehicle;
+  chip('c-app', 'ok', '앱 연결됨');
+  const sim = s.app.monitor === 'SIMULATION';
+  chip('c-monitor', sim ? 'sim' : 'accent', s.app.monitor);
+  const vt = {LIVE:'ok', SIMULATION:'sim', CONNECTING:'warn', STALE:'danger', DISCONNECTED:''}[v.state];
+  chip('c-video', vt, `영상 ${v.state}`);
+  if (!veh) chip('c-pixhawk', '', 'Pixhawk 미선택');
+  else chip('c-pixhawk', veh.heartbeat_stale ? 'danger' : 'ok', `Pixhawk ${veh.heartbeat_stale ? 'STALE' : 'OK'} · HB ${num(veh.heartbeat_age_s, 's')}`);
+  const sen = s.sentinel && s.sentinel.state;
+  chip('c-sentinel', sen && sen !== '미사용' ? 'ok' : '', `Sentinel ${typeof sen === 'string' ? sen : (sen ? '활성' : dash)}`);
+  $('banner').dataset.level = s.banner.level; txt('banner', s.banner.text);
+
+  txt('f-src', v.source_id ? `${short(v.source_id)} · ${v.source}` : v.source);
+  txt('f-ses', short(v.session_id)); txt('f-seq', v.frame_seq);
+  txt('f-res', v.width ? `${v.width}×${v.height}` : null);
+  txt('f-age', num(v.frame_age_ms, ' ms')); txt('f-fps', v.decode_fps);
+  txt('f-route', v.route); txt('f-rec', v.reconnects);
+  const wkey = JSON.stringify(v.warnings || []);
+  if ($('warnings').dataset.k !== wkey) { $('warnings').dataset.k = wkey;
+    $('warnings').innerHTML = (v.warnings || []).map(w => `<div>⚠ ${esc(w)}</div>`).join(''); }
+
+  const sel = t.selection, cd = $('countdown');
+  cd.classList.toggle('show', !!sel);
+  if (sel) cd.innerHTML = `ROI 선택 · 남은 시간 ${Math.ceil(sel.remaining_s)}초<small>${sel.catchup_remaining_s > 0
+    ? `따라잡기 ${Math.ceil(sel.catchup_remaining_s)}초` : '따라잡기 시간 초과 · 그리면 최신 프레임 재고정'}</small>`;
+  const st = $('t-state'); st.dataset.s = t.state; txt('t-state', t.state); txt('t-reason', t.reason_text);
+  txt('t-q', t.quality == null ? null : Number(t.quality).toFixed(2)); txt('t-hold', num(t.hold_s, ' s')); txt('t-pfps', t.processing_fps);
+  txt('t-err', t.image_error ? `${t.image_error[0]}, ${t.image_error[1]}` : null);
+  txt('t-bbox', t.bbox ? t.bbox.join(', ') : null); txt('t-class', t.object_class);
+  txt('t-timeout', num(t.timeout_s, ' s'));
+  txt('t-sim', s.simulation.enabled ? `허용 · seq ${s.simulation.output ? s.simulation.output.frame_seq : dash}` : '해제');
+  txt('web-result', s.app.web_result);
+
+  const selecting = t.state === 'SELECTING';
+  $('stage').classList.toggle('selecting', selecting);
+  $('b-select').disabled = !(v.state === 'LIVE' || v.state === 'SIMULATION') || selecting;
+  $('b-cancel').disabled = !selecting;
+  $('b-sim').disabled = s.simulation.enabled || t.state !== 'TRACKING';
+  $('b-unsim').disabled = !s.simulation.enabled;
+
+  renderVehicle(veh); renderModes(s.modes, veh); renderEvents(s.events);
+}
+
+function staleTag(o) { return o && o.stale ? '<span class="stale">STALE</span>' : ''; }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function renderVehicle(veh) {
+  const box = $('veh');
+  if (!veh) { box.innerHTML = '<dt>기체</dt><dd>선택된 기체 없음</dd>'; drawTrack([]); txt('alt-note', '기체 미선택'); return; }
+  const a = veh.attitude, alt = veh.altitude, g = veh.gps, b = veh.battery, gs = veh.groundspeed;
+  const rows = [
+    ['기체', `${veh.name} · ${veh.connected ? '연결' : '끊김'}`],
+    ['링크', `${veh.link || dash} (#${veh.link_id ?? dash})`],
+    ['SYSID / COMPID', `${veh.sysid ?? dash} / ${veh.compid ?? dash}`],
+    ['펌웨어', `${veh.firmware || dash}${veh.sw_version ? ' · ' + veh.sw_version : ''}`],
+    ['모드', veh.mode || dash], ['ARMED', veh.armed == null ? dash : (veh.armed ? 'ARMED' : 'DISARMED')],
+    ['HEARTBEAT', num(veh.heartbeat_age_s, ' s 전'), {stale:veh.heartbeat_stale}],
+    ['RC override', veh.rc_override ? '활성' : '없음'],
+    ['자세 R/P/Y', a ? `${num(a.roll,'°')} / ${num(a.pitch,'°')} / ${num(a.yaw,'°')}` : dash, a],
+    ['고도 상대 / MSL', alt ? `${num(alt.relative_m,' m')} / ${num(alt.msl_m,' m')}` : dash, alt],
+    ['대지속도', gs ? num(gs.mps, ' m/s') : dash, gs],
+    ['GPS', g ? `${g.fix_text} · 위성 ${g.sats ?? dash}` : dash, g],
+    ['배터리', b ? `${num(b.volt, ' V')} · ${num(b.pct, ' %')}` : dash, b],
+    ['위치', veh.position ? `${veh.position.lat.toFixed(6)}, ${veh.position.lon.toFixed(6)}` : dash, veh.position],
+  ];
+  box.innerHTML = rows.map(([k, val, o]) => `<dt>${esc(k)}</dt><dd>${esc(val)}${staleTag(o)}</dd>`).join('');
+  txt('alt-note', alt ? `고도 기준 · ${alt.reference}` : '고도 미수신');
+  drawTrack(veh.track || []);
+}
+
+function drawTrack(points) {
+  const c = $('track'), dpr = devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  if (points.length < 1) { g.fillStyle = '#b4bccb'; g.font = '700 14px ' + getComputedStyle(document.body).fontFamily; g.fillText('위치 궤적 없음', 12, 24); return; }
+  const lat0 = points[points.length - 1][0], k = Math.cos(lat0 * Math.PI / 180);
+  const xs = points.map(p => p[1] * k), ys = points.map(p => p[0]);
+  const minx = Math.min(...xs), maxx = Math.max(...xs), miny = Math.min(...ys), maxy = Math.max(...ys);
+  const span = Math.max(maxx - minx, maxy - miny, 2e-5), s = Math.min(w, h) * .8 / span;
+  const cx = (minx + maxx) / 2, cy = (miny + maxy) / 2;
+  const P = i => [w / 2 + (xs[i] - cx) * s, h / 2 - (ys[i] - cy) * s];
+  g.strokeStyle = '#ffce35'; g.lineWidth = 3; g.lineJoin = 'round'; g.beginPath();
+  points.forEach((_, i) => { const [x, y] = P(i); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+  const [x, y] = P(points.length - 1); g.fillStyle = '#39e19a'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill();
+  g.fillStyle = '#b4bccb'; g.font = '600 12px ' + getComputedStyle(document.body).fontFamily;
+  g.fillText(`약 ${Math.round(span * 111320)} m 범위 · 북쪽 위`, 10, h - 10);
+}
+
+let modeKey = '';
+function renderModes(m, veh) {
+  const ctl = m.controller || {}, busy = ctl.state === 'CONFIRMING' || ctl.state === 'REQUESTING';
+  const blocked = !veh || veh.heartbeat_stale;
+  const key = JSON.stringify([m.options, veh && veh.mode, busy, blocked]);
+  if (key !== modeKey) {
+    modeKey = key;
+    const box = $('modes'); box.innerHTML = '';
+    if (!m.options.length) box.innerHTML = '<span class="note">선택 기체가 없거나 펌웨어 모드 목록을 알 수 없습니다.</span>';
+    m.options.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'btn' + (veh && veh.mode === o.name ? ' current' : ''); b.textContent = o.enabled ? o.name : `${o.name} (비활성)`;
+      b.disabled = !o.enabled || busy || blocked || (veh && veh.mode === o.name);
+      if (o.reason) b.title = o.reason;
+      b.addEventListener('click', () => post({action:'mode_prepare', mode:o.name, vehicle:veh.key}));
+      box.appendChild(b);
+    });
+  }
+  txt('mode-state', `${ctl.state || dash} · ${ctl.detail || ''}${blocked && veh ? ' · HEARTBEAT stale: 요청 불가' : ''}`);
+  const any = ctl.state === 'CONFIRMING' ? ctl.ticket : null;
+  const tk = any && any.source === 'web' ? any : null, cf = $('confirm');
+  if (any && !tk) txt('mode-state', `CONFIRMING · Linker 앱 창에서 확인 중인 요청이 있습니다 · ${ctl.detail || ''}`);
+  if (tk && cf.dataset.id !== tk.id) {
+    cf.dataset.id = tk.id; $('cf-check').checked = false; $('cf-ok').disabled = true;
+    txt('cf-target', `${tk.name} · link #${tk.link_id} · SYS ${tk.sysid}/COMP ${tk.compid} · ${tk.firmware}  ·  ${tk.current_mode} → ${tk.mode} · ${tk.armed ? 'ARMED' : 'DISARMED'}`);
+    $('cf-impact').innerHTML = (tk.impact || []).map(l => `<li>${esc(l)}</li>`).join('');
+    $('cf-armed').classList.toggle('show', !!tk.armed); cf.classList.toggle('armed', !!tk.armed);
+  }
+  if (!tk) cf.dataset.id = '';
+  cf.classList.toggle('show', !!tk);
+}
+$('cf-check').addEventListener('change', e => { $('cf-ok').disabled = !e.target.checked; });
+$('cf-ok').addEventListener('click', () => {
+  const tk = state && state.modes.controller.ticket, veh = state && state.vehicle;
+  if (!tk || !veh) return;
+  $('cf-ok').disabled = true; post({action:'mode_commit', ticket:tk.id, vehicle:veh.key});
+});
+$('cf-no').addEventListener('click', () => post({action:'mode_cancel'}));
+
+let eventKey = '';
+function renderEvents(events) {
+  const key = JSON.stringify(events[0] || null) + events.length;
+  if (key === eventKey) return; eventKey = key;
+  const ul = $('events'); ul.innerHTML = '';
+  events.forEach(e => {
+    const li = document.createElement('li'); li.dataset.level = e.level;
+    for (const [cls, val] of [['t', e.t], ['k', e.kind], ['x', e.text]]) { const s = document.createElement('span'); s.className = cls; s.textContent = val; li.appendChild(s); }
+    ul.appendChild(li);
+  });
+}
+
+/* ---------------- video + overlay ---------------- */
+const canvas = $('view');
+function layout() {   // image rectangle inside the canvas (contain / letterbox), in CSS pixels
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!meta) return {w, h, x:0, y:0, dw:0, dh:0, s:1};
+  const s = Math.min(w / meta.width, h / meta.height), dw = meta.width * s, dh = meta.height * s;
+  return {w, h, x:(w - dw) / 2, y:(h - dh) / 2, dw, dh, s};
+}
+function draw() {
+  const dpr = devicePixelRatio || 1, L = layout();
+  if (canvas.width !== Math.round(L.w * dpr) || canvas.height !== Math.round(L.h * dpr)) {
+    canvas.width = Math.round(L.w * dpr); canvas.height = Math.round(L.h * dpr);
+  }
+  const g = canvas.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, L.w, L.h);
+  $('novideo').style.display = bitmap ? 'none' : 'grid';
+  if (!bitmap || !meta) { txt('f-bage', null); return; }
+  g.drawImage(bitmap, L.x, L.y, L.dw, L.dh);
+  txt('f-bage', meta.servedAge == null ? null : `${Math.round(meta.servedAge + performance.now() - meta.arrived)} ms`);
+  const X = v => L.x + v * L.s, Y = v => L.y + v * L.s;
+  // image centre cross (reference for the image error)
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.setLineDash([8, 6]); g.beginPath();
+  g.moveTo(X(meta.width / 2), L.y); g.lineTo(X(meta.width / 2), L.y + L.dh);
+  g.moveTo(L.x, Y(meta.height / 2)); g.lineTo(L.x + L.dw, Y(meta.height / 2)); g.stroke(); g.setLineDash([]);
+  const o = meta.overlay;
+  if (o && o.bbox && state && state.tracking.state === 'TRACKING') {
+    if (o.trail && o.trail.length > 1) {
+      g.strokeStyle = 'rgba(255,206,53,.75)'; g.lineWidth = 2.5; g.beginPath();
+      o.trail.forEach(([a, b], i) => i ? g.lineTo(X(a), Y(b)) : g.moveTo(X(a), Y(b))); g.stroke();
+    }
+    const [bx, by, bw, bh] = o.bbox;
+    g.strokeStyle = '#000'; g.lineWidth = 6; g.strokeRect(X(bx), Y(by), bw * L.s, bh * L.s);
+    g.strokeStyle = '#39e19a'; g.lineWidth = 3.5; g.strokeRect(X(bx), Y(by), bw * L.s, bh * L.s);
+    const [cx, cy] = o.center;
+    g.strokeStyle = '#ffce35'; g.lineWidth = 2.5; g.beginPath();
+    g.moveTo(X(meta.width / 2), Y(meta.height / 2)); g.lineTo(X(cx), Y(cy)); g.stroke();
+    g.fillStyle = '#ffce35'; g.beginPath(); g.arc(X(cx), Y(cy), 6, 0, 7); g.fill();
+    label(g, X(bx), Y(by) - 8, `TRACKING · 품질 ${state.tracking.quality == null ? dash : Number(state.tracking.quality).toFixed(2)}`, '#39e19a');
+  } else if (state && (state.tracking.state === 'LOST' || state.tracking.state === 'ERROR')) {
+    label(g, L.x + 12, L.y + 30, `${state.tracking.state} · ${state.tracking.reason_text}`, '#ff5a78');
+  }
+  if (drag) {
+    const r = norm(drag);
+    g.fillStyle = 'rgba(255,206,53,.15)'; g.fillRect(X(r[0]), Y(r[1]), r[2] * L.s, r[3] * L.s);
+    g.strokeStyle = '#ffce35'; g.lineWidth = 3; g.setLineDash([10, 6]); g.strokeRect(X(r[0]), Y(r[1]), r[2] * L.s, r[3] * L.s); g.setLineDash([]);
+    label(g, X(r[0]), Y(r[1]) - 8, `ROI ${Math.round(r[2])}×${Math.round(r[3])}`, '#ffce35');
+  }
+  const tag = state && state.app.monitor === 'SIMULATION' ? 'SIMULATION' : 'MONITOR ONLY';
+  g.font = '800 16px ' + getComputedStyle(document.body).fontFamily;
+  label(g, L.x + L.dw - 17 - g.measureText(tag).width, L.y + L.dh - 14, tag, tag === 'SIMULATION' ? '#c49bff' : '#ffce35');
+}
+function label(g, x, y, text, color) {
+  g.font = '800 16px ' + getComputedStyle(document.body).fontFamily;
+  const w = g.measureText(text).width;
+  g.fillStyle = 'rgba(0,0,0,.78)'; g.fillRect(x - 5, y - 18, w + 10, 25);
+  g.fillStyle = color; g.fillText(text, x, y);
+}
+
+async function pollFrame() {
+  if (!document.hidden) {
+    try {
+      const r = await fetch('/frame.jpg', {headers:{'X-Dashboard-Token':token}, cache:'no-store'});
+      if (r.status === 204) { bitmap = null; meta = null; }
+      else if (r.ok) {
+        const m = JSON.parse(r.headers.get('X-Frame-Meta') || 'null');
+        const age = r.headers.get('X-Frame-Age-Ms'), arrived = performance.now();
+        const b = await createImageBitmap(await r.blob());
+        if (m) { m.servedAge = age === null || age === '' ? null : Number(age); m.arrived = arrived; }
+        if (bitmap) bitmap.close();
+        bitmap = b; meta = m;
+        if (drag && (!m || !m.selecting || m.session_id !== drag.session || m.frame_seq !== drag.seq)) drag = null;
+      }
+    } catch (e) { /* state poll reports the outage */ }
+    draw();
+  }
+  setTimeout(pollFrame, 120);
+}
+
+/* ---------------- ROI selection (canvas → original frame coordinates) ---------------- */
+function toImage(ev) {
+  const rect = canvas.getBoundingClientRect(), L = layout();
+  const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+  if (px < L.x || py < L.y || px > L.x + L.dw || py > L.y + L.dh) return null;   // letterbox margin
+  return [(px - L.x) / L.s, (py - L.y) / L.s];
+}
+function norm(d) {
+  const x0 = Math.min(d.a[0], d.b[0]), y0 = Math.min(d.a[1], d.b[1]);
+  return [x0, y0, Math.abs(d.b[0] - d.a[0]), Math.abs(d.b[1] - d.a[1])];
+}
+function pinnedMatches() {
+  const p = state && state.tracking.pinned;
+  return p && meta && meta.selecting && p.session_id === meta.session_id && p.frame_seq === meta.frame_seq;
+}
+canvas.addEventListener('pointerdown', ev => {
+  if (!state || state.tracking.state !== 'SELECTING' || !pinnedMatches()) return;
+  const p = toImage(ev);
+  if (!p) { txt('web-result', '영상 여백입니다 · 영상 안쪽을 드래그하세요'); return; }
+  canvas.setPointerCapture(ev.pointerId);
+  drag = {a:p, b:p, session:meta.session_id, seq:meta.frame_seq};
+});
+canvas.addEventListener('pointermove', ev => {
+  if (!drag || !meta) return;
+  const rect = canvas.getBoundingClientRect(), L = layout();
+  const x = Math.min(Math.max((ev.clientX - rect.left - L.x) / L.s, 0), meta.width);
+  const y = Math.min(Math.max((ev.clientY - rect.top - L.y) / L.s, 0), meta.height);
+  drag.b = [x, y]; draw();
+});
+canvas.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const r = norm(drag), p = state.tracking.pinned; drag = null; draw();
+  if (r[2] < 8 || r[3] < 8) { txt('web-result', 'ROI가 너무 작습니다 · 다시 드래그하세요'); return; }
+  if (!pinnedMatches()) { txt('web-result', '선택 프레임이 바뀌었습니다 · 다시 선택하세요'); return; }
+  post({action:'select_roi', ref:{source_id:p.source_id, session_id:p.session_id, frame_seq:p.frame_seq, width:p.width, height:p.height},
+        roi:r.map(v => Math.round(v * 10) / 10)});
+});
+canvas.addEventListener('pointercancel', () => { drag = null; draw(); });
+addEventListener('resize', draw);
+
+/* ---------------- guides ---------------- */
+const helps = [...document.querySelectorAll('button.help')];
+function setHelp(b, open) { b.setAttribute('aria-expanded', String(open)); $(b.getAttribute('aria-controls')).hidden = !open; }
+function syncGuideAll() { $('guide-all').setAttribute('aria-expanded', String(helps.every(b => b.getAttribute('aria-expanded') === 'true'))); }
+helps.forEach(b => b.addEventListener('click', () => { setHelp(b, b.getAttribute('aria-expanded') !== 'true'); syncGuideAll(); }));
+$('guide-all').addEventListener('click', () => { const open = $('guide-all').getAttribute('aria-expanded') !== 'true';
+  helps.forEach(b => setHelp(b, open)); syncGuideAll(); });
+if (location.hash === '#guide') { helps.forEach(b => setHelp(b, true)); syncGuideAll(); }
+
+pollState(); pollFrame();
+</script>
+</body>
+</html>
