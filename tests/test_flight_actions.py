@@ -1,8 +1,11 @@
 import time
 import unittest
+from types import SimpleNamespace
 
 from PyQt5.QtCore import QCoreApplication, QObject, pyqtSignal
+from pymavlink import mavutil
 from flight_actions import TakeoffSequence, MissionSequence
+from Linker import Linker
 
 
 class FakeVehicle(QObject):
@@ -61,6 +64,27 @@ class FlightActionsTest(unittest.TestCase):
                 vehicle.commandFeedback.emit('UPLOAD_MISSION', False, 'rejected')
             self.assertNotIn('start', vehicle.calls)
             self.assertEqual(action.stage, 'done')
+
+    def test_mission_ack_requires_every_requested_sequence(self):
+        linker = Linker()
+        linker._mission_items = [{'seq': 0}, {'seq': 1}]
+        results = []
+        linker.commandFeedback.connect(
+            lambda command, success, message: results.append((command, success))
+        )
+
+        ack = SimpleNamespace(
+            get_type=lambda: 'MISSION_ACK',
+            type=mavutil.mavlink.MAV_MISSION_ACCEPTED,
+        )
+
+        linker._mission_requested = {0}
+        linker.handle_message(ack)
+        self.assertEqual(results[-1], ('UPLOAD_MISSION', False))
+
+        linker._mission_requested = {0, 1}
+        linker.handle_message(ack)
+        self.assertEqual(results[-1], ('UPLOAD_MISSION', True))
 
 
 if __name__ == '__main__':

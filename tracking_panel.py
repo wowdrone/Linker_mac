@@ -852,6 +852,6 @@ class TrackingPanel(QDialog):
                 return event.accept()
             self.service.close_dashboard()
         self.service.disconnect_source('panel_closed')
-        self.session.stop('panel_closed')
+        self.service.session.stop('panel_closed')
         self._image_key = None
         event.accept()

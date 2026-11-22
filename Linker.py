@@ -910,8 +910,9 @@ class Linker(QObject):
             else:
                 res_text = f"result={result}"
 
+            requested_seq = set(range(len(self._mission_items)))
             success = (result == mavutil.mavlink.MAV_MISSION_ACCEPTED and
-                       len(self._mission_requested) == len(self._mission_items) and
+                       self._mission_requested == requested_seq and
                        bool(self._mission_items))
             if result == mavutil.mavlink.MAV_MISSION_ACCEPTED and not success:
                 res_text += ' (미요청 미션 항목 있음)'
