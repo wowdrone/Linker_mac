@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Linker Tracking / Telemetry</title>
+<title>Linker Tracking</title>
 <style>
 /* Linker Tracking browser view. Self-contained: no external fonts, scripts or images.
    Layout: header (mode + links) / banner / [video + controls | tracking metrics + vehicle + mode + events]. */
@@ -88,23 +88,71 @@ dd .stale { color:var(--warn); font-family:var(--font); font-size:12px; font-wei
 #events .t { font-family:var(--mono); color:var(--muted); } #events .k { font-weight:800; color:var(--accent); }
 #events li[data-level="warn"] .x { color:var(--warn); } #events li[data-level="danger"] .x { color:var(--danger); font-weight:700; }
 .offline header { border-bottom-color:var(--danger); }
-/* On-demand guides (UI guide principle): hidden until "?" or the header "가이드" button. */
+/* Classic dashboard: expanded guides with optional per-card and global collapse. */
 .cardhead { display:flex; align-items:center; gap:10px; margin:0 0 10px; }
 .cardhead h2 { margin:0; }
-button.help { width:36px; height:36px; flex:none; border-radius:50%; border:2px solid var(--accent); background:var(--field); color:var(--accent); font-size:19px; font-weight:900; cursor:pointer; line-height:1; }
-button.help[aria-expanded="true"] { background:var(--accent); color:var(--accent-text); }
+.cardhead .help { margin-left:auto; }
+button.help { width:34px; height:34px; flex:none; border-radius:50%; border:2px solid var(--accent); background:var(--field); color:var(--accent); font-size:19px; font-weight:900; cursor:pointer; line-height:1; }
+button.help[aria-expanded="false"] { background:var(--accent); color:var(--accent-text); }
 button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; outline-offset:2px; }
 .helpbox { margin:0 0 12px; padding:12px 16px; border:2px solid var(--accent); border-radius:10px; background:#211d0d; }
 .helpbox ul { margin:0; padding-left:20px; }
-.helpbox li { font-size:16px; font-weight:700; line-height:1.5; color:#fff; margin:4px 0; }
-#guide-all { min-height:40px; }
+.helpbox li { font-size:14px; font-weight:700; line-height:1.5; color:#fff; margin:4px 0; }
+#guide-all { min-height:38px; padding:6px 15px; border-radius:999px; }
+#guide-all[aria-expanded="false"] { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+.video-details { margin-top:10px; color:var(--muted); font-size:13px; }
+.video-details summary { cursor:pointer; }
+.video-details li { margin:5px 0; }
 .warnings { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
 .warnings div { padding:8px 12px; border-radius:8px; border:2px solid var(--warn); color:var(--warn); font-weight:800; font-size:15px; }
+
+/* Viewport-contained dashboard: each right-hand card scrolls independently. */
+html { height:100%; overflow:hidden; }
+body { height:100vh; height:100dvh; min-height:0; overflow:hidden;
+  display:grid; grid-template-rows:auto auto minmax(0,1fr); }
+header { min-width:0; gap:6px 10px; padding:8px 14px; }
+header .chip { font-size:12px; padding:4px 8px; max-width:100%; overflow-wrap:anywhere; }
+#banner { margin:10px 14px 0; padding:8px 12px; font-size:15px; overflow-wrap:anywhere; }
+main { min-width:0; min-height:0; overflow:hidden; padding:12px 14px;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+main > *, .card { min-width:0; min-height:0; }
+.video-panel { display:flex; }
+.video-card { width:100%; display:flex; flex-direction:column; overflow:hidden; }
+.video-card .stage { flex:1 1 0; min-height:80px; max-height:none; aspect-ratio:auto; }
+.video-card .frameinfo { max-height:70px; overflow:auto; flex-shrink:0; overflow-wrap:anywhere; }
+.video-card .warnings { max-height:90px; overflow:auto; flex-shrink:0; }
+aside { display:grid; grid-template-rows:repeat(3,minmax(0,1fr)); gap:10px; overflow:hidden; }
+aside > .card { overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+.card { padding:10px 12px; overflow-wrap:anywhere; }
+.card + .card { margin-top:0; }
+.cardhead { margin-bottom:8px; }
+.btn { min-height:36px; padding:6px 10px; font-size:13px; white-space:normal; max-width:100%; }
+.controls { gap:6px; margin-top:6px; }
+.controls .sep { display:none; }
+.control-card > .controls { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+button.help, button.help[aria-expanded="true"] { color:#fff; border-color:#fff; background:var(--field); }
+dl.kv { grid-template-columns:minmax(0,auto) minmax(0,1fr); font-size:13px; }
+dl.kv dd { font-size:13px; overflow-wrap:anywhere; }
+.subpanel { margin-top:12px; border-top:1px solid var(--border); padding-top:10px; }
+.subpanel summary { cursor:pointer; color:var(--accent); font-weight:700; }
+#events li { grid-template-columns:52px 32px minmax(0,1fr); }
+@media (max-width:760px), (max-height:500px) {
+  header { max-height:28vh; overflow:auto; }
+  .brand { font-size:18px; }
+  main { display:block; overflow:auto; }
+  .video-panel { height:45vh; min-height:240px; margin-bottom:12px; }
+  aside { display:flex; flex-direction:column; overflow:visible; }
+  aside > .card { flex:none; max-height:65vh; min-height:160px; }
+}
+@media (max-width:380px) {
+  .control-card > .controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  main { padding:8px; }
+}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand">Linker <span>Tracking</span> / Telemetry</div>
+  <div class="brand">Linker <span>Tracking</span></div>
   <span class="chip" id="c-monitor" data-tone="accent"><i></i><span>MONITOR ONLY</span></span>
   <div class="spacer"></div>
   <button class="btn" id="guide-all" type="button" aria-expanded="false">가이드</button>
@@ -116,18 +164,9 @@ button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; ou
 <div id="banner" data-level="info" role="status" aria-live="polite">상태 수신 대기</div>
 
 <main>
-  <section>
-    <div class="card">
-      <div class="cardhead"><h2>영상</h2><button class="help" type="button" aria-label="영상 가이드" aria-expanded="false" aria-controls="help-video">?</button></div>
-      <div class="helpbox" id="help-video" hidden><ul>
-        <li>ROI 선택 → 고정된 프레임 위를 드래그. 영상 여백은 선택되지 않습니다. Esc = 선택 취소.</li>
-        <li>이 화면은 영상 관찰만 합니다. 추적 결과로 기체를 조종하지 않습니다.</li>
-        <li>ROI는 무늬가 뚜렷한 곳(모서리·글자·경계)을 선택하세요. 민무늬 영역은 「ROI 텍스처 부족」으로 거부됩니다.</li>
-        <li>선택 시간(기본 8초) 안에 그립니다. 고정 후 4초 안에 그리면 그 사이 프레임을 따라잡아 최신 프레임까지 추적합니다. 4초가 지나거나 따라잡기에 실패하면 최신 프레임이 다시 고정되며, 그 프레임에서 다시 그리세요. 다른 객체로 자동 전환하지 않습니다.</li>
-        <li>브라우저 영상은 Linker가 만든 JPEG 스냅샷(최대 약 10장/초)이라 앱 창보다 늦습니다. 「브라우저 영상 나이」는 앱 수신 시각부터 이 화면에 표시될 때까지의 시간입니다.</li>
-        <li>경로: 「로컬 중계」는 이 Mac의 중계 서버(rtsp://127.0.0.1:8554/cam)를 거친 영상, 「직접 연결」은 카메라에 직접 연결한 영상입니다. 같은 카메라에 직접 연결이 여러 개면 무선 링크 부하가 늘어납니다.</li>
-        <li>영상 연결은 Linker 앱에 저장된 기존 Fly/CH1 주소로만 연결합니다.</li>
-      </ul></div>
+  <section class="video-panel">
+    <div class="card video-card">
+      <div class="cardhead"><h2>영상 화면</h2></div>
       <div class="stage" id="stage">
         <canvas id="view" aria-label="추적 영상"></canvas>
         <div id="novideo">영상 프레임 없음</div>
@@ -141,6 +180,20 @@ button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; ou
         <span>재연결 <b id="f-rec">—</b></span>
       </div>
       <div class="warnings" id="warnings" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card control-card">
+      <div class="cardhead"><h2>영상 제어</h2><button class="help" type="button" aria-label="영상 가이드" aria-expanded="false" aria-controls="help-video">?</button></div>
+      <div class="helpbox" id="help-video" hidden><ul>
+        <li>ROI 선택 → 고정된 프레임 위를 드래그합니다. Esc = 선택 취소.</li>
+        <li>영상 바깥 검은 여백은 선택되지 않습니다.</li>
+        <li>무늬가 뚜렷한 곳(모서리·글자·경계)을 고르세요. 민무늬는 거부됩니다.</li>
+        <li>LOST가 되면 새 ROI를 선택해야 다시 추적합니다.</li>
+        <li>브라우저 영상은 JPEG 스냅샷(최대 약 10장/초)이라 앱 창보다 늦습니다.</li>
+        <li>이 화면의 추적 결과는 기체를 조종하지 않습니다.</li>
+      </ul></div>
       <div class="controls">
         <button class="btn" data-cmd="video_connect">영상 연결</button>
         <button class="btn" data-cmd="video_disconnect">영상 해제</button>
@@ -155,11 +208,17 @@ button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; ou
         <button class="btn" id="b-unsim" data-cmd="revoke_simulation">모의 출력 해제</button>
       </div>
       <div class="result">마지막 요청 · <b id="web-result">—</b></div>
+      <details class="video-details"><summary>영상 연결·ROI 상세 안내</summary><ul>
+        <li>ROI 선택 → 고정된 프레임 위를 드래그. 영상 여백은 선택되지 않습니다. Esc = 선택 취소.</li>
+        <li>이 화면은 영상 관찰만 합니다. 추적 결과로 기체를 조종하지 않습니다.</li>
+        <li>ROI는 무늬가 뚜렷한 곳(모서리·글자·경계)을 선택하세요. 민무늬 영역은 「ROI 텍스처 부족」으로 거부됩니다.</li>
+        <li>선택 시간(기본 8초) 안에 그립니다. 고정 후 4초 안에 그리면 그 사이 프레임을 따라잡아 최신 프레임까지 추적합니다. 4초가 지나거나 따라잡기에 실패하면 최신 프레임이 다시 고정되며, 그 프레임에서 다시 그리세요. 다른 객체로 자동 전환하지 않습니다.</li>
+        <li>브라우저 영상은 Linker가 만든 JPEG 스냅샷(최대 약 10장/초)이라 앱 창보다 늦습니다. 「브라우저 영상 나이」는 앱 수신 시각부터 이 화면에 표시될 때까지의 시간입니다.</li>
+        <li>경로: 「로컬 중계」는 이 Mac의 중계 서버(rtsp://127.0.0.1:8554/cam)를 거친 영상, 「직접 연결」은 카메라에 직접 연결한 영상입니다. 같은 카메라에 직접 연결이 여러 개면 무선 링크 부하가 늘어납니다.</li>
+        <li>영상 연결은 Linker 앱에 저장된 기존 Fly/CH1 주소로만 연결합니다.</li>
+      </ul></details>
     </div>
-  </section>
-
-  <aside>
-    <div class="card">
+    <div class="card tracking-card">
       <div class="cardhead"><h2>추적 상태</h2><button class="help" type="button" aria-label="추적 상태 가이드" aria-expanded="false" aria-controls="help-track">?</button></div>
       <div class="helpbox" id="help-track" hidden><ul>
         <li>품질은 남아 있는 특징점·이동 일관성 지표이며 객체 확률이 아닙니다.</li>
@@ -178,6 +237,9 @@ button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; ou
         <dt>timeout</dt><dd id="t-timeout">—</dd>
         <dt>모의 출력</dt><dd id="t-sim">—</dd>
       </dl>
+      <details class="subpanel"><summary>이벤트</summary>
+      <ul id="events"></ul>
+      </details>
     </div>
 
     <div class="card">
@@ -190,9 +252,7 @@ button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; ou
       <dl class="kv" id="veh"></dl>
       <canvas id="track" aria-label="최근 위치 궤적"></canvas>
       <div class="note" id="alt-note">—</div>
-    </div>
-
-    <div class="card">
+      <section class="subpanel mode-panel">
       <div class="cardhead"><h2>비행 모드 변경</h2><button class="help" type="button" aria-label="비행 모드 가이드" aria-expanded="false" aria-controls="help-mode">?</button></div>
       <div class="helpbox" id="help-mode" hidden><ul>
         <li>모드 요청은 ARM·이륙·미션을 수행하지 않고 자동 재시도하지 않습니다. 결과는 기체 HEARTBEAT로 확인합니다.</li>
@@ -214,16 +274,11 @@ button.help:focus-visible, #guide-all:focus-visible { outline:3px solid #fff; ou
           <button class="btn" id="cf-no">취소</button>
         </div>
       </div>
+      </section>
+
+
     </div>
 
-    <div class="card">
-      <div class="cardhead"><h2>이벤트</h2><button class="help" type="button" aria-label="이벤트 가이드" aria-expanded="false" aria-controls="help-events">?</button></div>
-      <div class="helpbox" id="help-events" hidden><ul>
-        <li>최근 이벤트 40건입니다. 주황은 경고, 빨강은 상실·오류입니다.</li>
-        <li>전체 기록은 Linker Tracking 창의 「로그 저장」 JSON에 남습니다(모드 요청 감사 기록 포함).</li>
-      </ul></div>
-      <ul id="events"></ul>
-    </div>
   </aside>
 </main>
 
@@ -522,6 +577,7 @@ canvas.addEventListener('pointerup', () => {
 });
 canvas.addEventListener('pointercancel', () => { drag = null; draw(); });
 addEventListener('resize', draw);
+new ResizeObserver(draw).observe($('stage'));
 
 /* ---------------- guides ---------------- */
 const helps = [...document.querySelectorAll('button.help')];

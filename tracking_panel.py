@@ -103,6 +103,24 @@ QDialog#trackingWindow QComboBox:disabled { color:#6b7484; }
 QDialog#trackingWindow QListWidget { font-size:15px; background:#131821; color:#f5f7fb; border:1px solid #3a4352; }
 QDialog#trackingWindow QTabBar::tab { font-size:15px; font-weight:800; padding:7px 16px; color:#c9d1de; }
 QDialog#trackingWindow QTabBar::tab:selected { color:#ffd23f; }
+QDialog#trackingWindow QLabel { font-size:14px; }
+QDialog#trackingWindow QLabel[role="value"] { font-size:14px; }
+QDialog#trackingWindow QLabel[role="groupTitle"] { font-size:15px; color:#ffce35; }
+QDialog#trackingWindow QGroupBox { border:1px solid #3a4352; background:#1d222c;
+    border-radius:12px; padding:12px; margin-top:0; }
+QDialog#trackingWindow QPushButton { font-size:14px; font-weight:700; min-height:28px;
+    padding:5px 10px; border-width:1px; background:#131821; }
+QDialog#trackingWindow QLineEdit, QDialog#trackingWindow QComboBox,
+QDialog#trackingWindow QDoubleSpinBox { font-size:14px; min-height:28px; border-width:1px; }
+QDialog#trackingWindow QScrollArea {
+    background:#0e1118; border:0; }
+QDialog#trackingWindow QListWidget { font-size:13px; border-radius:8px; padding:6px; }
+QDialog#trackingWindow QTabWidget::pane { border:1px solid #3a4352; border-radius:8px; }
+QDialog#trackingWindow QTabBar::tab { font-size:14px; padding:6px 14px; background:#171b24; }
+QDialog#trackingWindow QTabBar::tab:selected { background:#1d222c; color:#ffce35; }
+QDialog#trackingWindow QSplitter::handle { background:#3a4352; border:2px solid #0e1118; }
+QDialog#trackingWindow QSplitter::handle:hover { background:#b4bccb; }
+
 """
 
 
@@ -124,9 +142,9 @@ def image_point(point, geometry):
 
 def chip_style(color, filled=False):
     if filled:
-        return (f'QLabel{{background:{color};color:#111;font-size:15px;font-weight:900;'
+        return (f'QLabel{{background:{color};color:#111;font-size:13px;font-weight:700;'
                 f'border:2px solid {color};border-radius:13px;padding:3px 10px;}}')
-    return (f'QLabel{{background:#131821;color:{color};font-size:15px;font-weight:800;'
+    return (f'QLabel{{background:#131821;color:{color};font-size:13px;font-weight:700;'
             f'border:2px solid {color};border-radius:13px;padding:3px 10px;}}')
 
 
@@ -141,7 +159,7 @@ class TrackingCanvas(VideoCanvas):
         self.countdown = None
         self.monitor = 'MONITOR ONLY'
         # Keep the inherited zoom buttons compact even under the large-button window style.
-        self.zoom_controls.setStyleSheet('QPushButton{min-height:26px;padding:0;font-size:15px;font-weight:900;'
+        self.zoom_controls.setStyleSheet('QPushButton{min-height:26px;padding:0;font-size:13px;font-weight:700;'
                                          'color:#fff;background:#232a36;border:1px solid #6b7484;border-radius:6px;}')
 
     def geometry_map(self):
@@ -233,20 +251,31 @@ class TrackingPanel(QDialog):
         self._event_key = None
         self.closed = False
         root = QVBoxLayout(self)
-        root.setSpacing(8)
+        root.setSpacing(12)
+        root.setContentsMargins(18, 14, 18, 14)
 
-        # ---- status chips ----
-        chips = QHBoxLayout()
+        # Compact two-row header keeps telemetry readable on laptop displays.
+        header = QHBoxLayout()
+        brand = QLabel('Linker <span style="color:#ffce35">Tracking</span>')
+        brand.setStyleSheet('QLabel{font-size:22px;font-weight:800;}')
+        header.addWidget(brand)
         self.chips = {}
-        for name in ('monitor', 'app', 'video', 'vehicle', 'heartbeat', 'mode', 'armed', 'tracking', 'sentinel',
-                     'webmode'):
+        chips = QGridLayout()
+        chips.setSpacing(8)
+        for i, name in enumerate(('monitor', 'app', 'video', 'vehicle', 'heartbeat', 'mode',
+                                  'armed', 'tracking', 'sentinel', 'webmode')):
             label = QLabel(DASH)
             self.chips[name] = label
-            chips.addWidget(label)
-        chips.addStretch(1)
-        self.guide_button = help_button(self, 'Linker Tracking', ALL_GUIDES)
-        chips.addWidget(self.guide_button)
+            label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            if i < 3:
+                header.addWidget(label)
+            else:
+                chips.addWidget(label, 0, i - 3)
+        header.addStretch(1)
+        self.guide_button = self._help_button('Linker Tracking', ALL_GUIDES)
+        header.addWidget(self.guide_button)
         set_guide(self, 'Linker Tracking', ALL_GUIDES)
+        root.addLayout(header)
         root.addLayout(chips)
         self.banner = QLabel('상태 확인 중')
         self.banner.setWordWrap(True)
@@ -265,43 +294,63 @@ class TrackingPanel(QDialog):
         self.web_open = self._button('브라우저 대시보드 열기', self.open_browser)
         self.web_close = self._button('대시보드 닫기', self.close_browser, 'danger')
         web.addWidget(self.web, 1); web.addWidget(self.web_open); web.addWidget(self.web_close)
-        web.addWidget(help_button(self, '브라우저 대시보드', GUIDES['브라우저 대시보드']))
+        web.addWidget(self._help_button('브라우저 대시보드', GUIDES['브라우저 대시보드']))
 
-        # ---- body: video | controls ----
-        split = QSplitter(Qt.Horizontal)
+        # Half-width video and three independently resizable right-hand panels.
+        self.main_splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter.setObjectName('trackingMainSplitter')
+        self.main_splitter.setChildrenCollapsible(False)
+        self.main_splitter.setHandleWidth(10)
+        self.main_splitter.setToolTip('가운데 경계를 드래그하여 좌우 너비 조절')
         self.canvas = TrackingCanvas(self)
+        self.canvas.setMinimumSize(200, 160)
         self.canvas.roiSelected.connect(self.session_select)
-        split.addWidget(self.canvas)
-        side = QWidget()
-        side_layout = QVBoxLayout(side)
-        side_layout.addWidget(self._source_box())
-        side_layout.addWidget(self._tracking_box())
-        side_layout.addWidget(self._mode_box())
-        side_layout.addWidget(self._vehicle_box())
-        side_layout.addStretch(1)
-        scroll = QScrollArea()
-        scroll.setWidget(side)
-        scroll.setWidgetResizable(True)
-        scroll.setMinimumWidth(440)
-        split.addWidget(scroll)
-        split.setStretchFactor(0, 3)
-        split.setStretchFactor(1, 1)
-        split.setSizes([960, 500])          # video is the main work area
-        bottom = QTabWidget()
+        left, video_layout = self._box('영상 소스', '영상 화면')
+        video_layout.addWidget(self.canvas, 1)
+        self.frame_info = QLabel(DASH)
+        self.frame_info.setWordWrap(True)
+        self.frame_info.setStyleSheet('QLabel{color:#b4bccb;font-size:12px;}')
+        video_layout.addWidget(self.frame_info)
+        self.main_splitter.addWidget(left)
+
+        self.right_splitter = QSplitter(Qt.Vertical)
+        self.right_splitter.setObjectName('trackingRightSplitter')
+        self.right_splitter.setChildrenCollapsible(False)
+        self.right_splitter.setHandleWidth(10)
+        self.right_splitter.setToolTip('가로 경계를 드래그하여 각 패널 높이 조절')
+        tracking = self._tracking_box()
+        control, control_layout = self._box('영상 소스', '영상 제어')
+        control_layout.addWidget(self._source_box())
+        control_layout.addWidget(self.tracking_controls)
+        self.right_splitter.addWidget(self._scroll_panel(control))
+
+        self.tracking_tabs = QTabWidget()
+        self.tracking_tabs.addTab(self._scroll_panel(tracking), '추적 정보')
         self.events = QListWidget()
+        self.events.setWordWrap(True)
+        self.tracking_tabs.addTab(self.events, '이벤트')
         self.diag = QLabel(DASH)
         self.diag.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.diag.setWordWrap(True)
         self.diag.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        bottom.addTab(self.events, '이벤트')
-        diag_scroll = QScrollArea(); diag_scroll.setWidget(self.diag); diag_scroll.setWidgetResizable(True)
-        bottom.addTab(diag_scroll, '진단')
-        vsplit = QSplitter(Qt.Vertical)
-        vsplit.addWidget(split)
-        vsplit.addWidget(bottom)
-        vsplit.setStretchFactor(0, 4)
-        vsplit.setStretchFactor(1, 1)
-        root.addWidget(vsplit, 1)
+        self.tracking_tabs.addTab(self._scroll_panel(self.diag), '진단')
+        self.tracking_tabs.setMinimumHeight(90)
+        self.right_splitter.addWidget(self.tracking_tabs)
+
+        self.vehicle_tabs = QTabWidget()
+        self.vehicle_tabs.addTab(self._scroll_panel(self._vehicle_box()), '기체 정보')
+        self.vehicle_tabs.addTab(self._scroll_panel(self._mode_box()), '비행 모드')
+        self.vehicle_tabs.setMinimumHeight(90)
+        self.right_splitter.addWidget(self.vehicle_tabs)
+        self.right_splitter.setMinimumWidth(360)
+        for i in range(3):
+            self.right_splitter.setStretchFactor(i, 1)
+        self.right_splitter.setSizes([240, 240, 240])
+        self.main_splitter.addWidget(self.right_splitter)
+        self.main_splitter.setStretchFactor(0, 1)
+        self.main_splitter.setStretchFactor(1, 1)
+        self.main_splitter.setSizes([700, 700])
+        root.addWidget(self.main_splitter, 1)
         root.addLayout(web)
         # The service owns the 33 ms tick; this view only redraws when it changes.
         self.service.changed.connect(self.refresh)
@@ -315,18 +364,37 @@ class TrackingPanel(QDialog):
         button.clicked.connect(slot)
         return button
 
-    def _box(self, title):
+    @staticmethod
+    def _scroll_panel(widget):
+        scroll = QScrollArea()
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(widget)
+        scroll.setMinimumSize(120, 90)
+        return scroll
+
+    def _help_button(self, title, items):
+        button = help_button(self, title, items)
+        # Local override: other Linker screens retain their own guide colours.
+        button.setStyleSheet(
+            'QToolButton{min-width:36px;min-height:36px;max-width:36px;max-height:36px;'
+            'padding:0;font-size:20px;font-weight:900;border-radius:18px;'
+            'border:2px solid #ffffff;color:#ffffff;background:#171b24;}'
+            'QToolButton:hover{background:#323b49;} QToolButton:focus{border:3px solid #ffffff;}')
+        return button
+
+    def _box(self, title, display_title=None):
         """Group box with a short title and a "?" button opening GUIDES[title]."""
         box = QGroupBox()
         box.setObjectName('trackingGroup')
         box.setAccessibleName(title)
         layout = QVBoxLayout(box)
         head = QHBoxLayout()
-        label = QLabel(title)
+        label = QLabel(display_title or title)
         label.setProperty('role', 'groupTitle')
         head.addWidget(label)
-        head.addWidget(help_button(self, title, GUIDES[title]))
         head.addStretch(1)
+        head.addWidget(self._help_button(title, GUIDES[title]))
         layout.addLayout(head)
         return box, layout
 
@@ -347,7 +415,9 @@ class TrackingPanel(QDialog):
         return grid, labels
 
     def _source_box(self):
-        box, layout = self._box('영상 소스')
+        box = QWidget()
+        layout = QVBoxLayout(box)
+        layout.setContentsMargins(0, 0, 0, 0)
         settings = QSettings('WowDrone', 'LinkerGCS')
         self.sources = QComboBox()
         for title, value in VIDEO_SOURCES:
@@ -368,8 +438,10 @@ class TrackingPanel(QDialog):
                        self._button('영상 해제', self.disconnect_source),
                        self._button('합성 모의 영상', self.start_demo, 'sim')):
             buttons.addWidget(widget)
-        for item in (self.sources, self.source):
-            layout.addWidget(item)
+        address = QHBoxLayout()
+        address.addWidget(self.sources, 1)
+        address.addWidget(self.source, 2)
+        layout.addLayout(address)
         layout.addLayout(row)
         layout.addLayout(buttons)
         self._sync_transport(self.source.text())
@@ -380,7 +452,7 @@ class TrackingPanel(QDialog):
         head = QHBoxLayout()
         self.state_badge = QLabel(DASH)
         self.state_badge.setAlignment(Qt.AlignCenter)
-        self.state_badge.setMinimumWidth(190)
+        self.state_badge.setMinimumWidth(150)
         self.reason = QLabel(DASH); self.reason.setWordWrap(True)
         self.reason.setStyleSheet('QLabel{font-size:17px;font-weight:800;}')
         head.addWidget(self.state_badge); head.addWidget(self.reason, 1)
@@ -395,18 +467,20 @@ class TrackingPanel(QDialog):
                                        ('cls', '객체 종류'), ('sim', '모의 출력'), ('route', '영상 경로'),
                                        ('rec', '재연결')])
         layout.addLayout(grid)
+        self.tracking_controls = QWidget()
+        controls = QVBoxLayout(self.tracking_controls)
+        controls.setContentsMargins(0, 0, 0, 0)
         rows = [[('ROI 선택', self.selecting, 'primary'), ('선택 취소', self.cancel_selection, None),
                  ('추적 정지', self.operator_stop, None)],
                 [('조종자 개입', self.intervention, 'danger'), ('모의 출력 허용', self.simulate, 'sim'),
-                 ('모의 출력 해제', self.revoke_simulation, None)],
-                [('로그 저장', self.save, None)]]
+                 ('모의 출력 해제', self.revoke_simulation, None), ('로그 저장', self.save, None)]]
         self.buttons = {}
         for row in rows:
             line = QHBoxLayout()
             for title, slot, kind in row:
                 self.buttons[title] = self._button(title, slot, kind)
                 line.addWidget(self.buttons[title])
-            layout.addLayout(line)
+            controls.addLayout(line)
         line = QHBoxLayout()
         self.timeout = QDoubleSpinBox(); self.timeout.setRange(.05, 10); self.timeout.setDecimals(2)
         self.timeout.setValue(self.service.session.timeout); self.timeout.setSuffix(' s 지연 한도')
@@ -418,7 +492,7 @@ class TrackingPanel(QDialog):
         self.window.setToolTip('ROI 선택 시간')
         self.window.valueChanged.connect(self.service.set_selection_window)
         line.addWidget(self.timeout); line.addWidget(self.window)
-        layout.addLayout(line)
+        controls.addLayout(line)
         return box
 
     def _mode_box(self):
@@ -603,8 +677,11 @@ class TrackingPanel(QDialog):
                                              QImage.Format_RGB888).copy())
         elif self._image_key is not None or self.canvas.image is None:
             self._image_key = None
-            self.canvas.clear('영상 없음 · 오른쪽 영상 소스에서 연결하세요')
+            self.canvas.clear('영상 없음 · 오른쪽 영상 제어에서 연결하세요')
         t, v, veh = snap['tracking'], snap['video'], snap['vehicle']
+        self.frame_info.setText(f"해상도 {v['width'] or DASH} × {v['height'] or DASH}  ·  "
+                                f"프레임 나이 {v['frame_age_ms'] if v['frame_age_ms'] is not None else DASH} ms  ·  "
+                                f"경로 {v.get('route') or DASH}")
         if t['state'] != 'SELECTING' and self.canvas.selecting:
             self.canvas.selecting = False
         sel = t.get('selection')
@@ -645,8 +722,8 @@ class TrackingPanel(QDialog):
         self._chip('sentinel', f'Sentinel Legacy {sentinel}', GREEN if sentinel not in ('미사용', None) else MUTED)
         level, text = snap['banner']['level'], snap['banner']['text']
         color = LEVEL_COLOR.get(level, BLUE)
-        style = (f'QLabel{{font-size:20px;font-weight:900;padding:10px 14px;border-radius:10px;'
-                 f'border:3px solid {color};color:{"#fff" if level == "danger" else color};'
+        style = (f'QLabel{{font-size:17px;font-weight:700;padding:10px 14px;border-radius:10px;'
+                 f'border:2px solid {color};color:{"#fff" if level == "danger" else color};'
                  f'background:{"#5a1424" if level == "danger" else "#171b24"};}}')
         if self.banner.styleSheet() != style:
             self.banner.setStyleSheet(style)
@@ -654,14 +731,15 @@ class TrackingPanel(QDialog):
 
     def _render_tracking(self, snap, t, v, sel):
         color = STATE_COLOR.get(t['state'], MUTED)
-        style = (f'QLabel{{background:{color};color:#111;font-size:30px;font-weight:900;'
-                 f'border-radius:10px;padding:6px 12px;}}')
+        style = (f'QLabel{{background:transparent;color:{color};font-size:30px;font-weight:900;'
+                 f'border:0;padding:2px 0;}}')
         if self.state_badge.styleSheet() != style:
             self.state_badge.setStyleSheet(style)
         self.state_badge.setText(t['state'])
         self.reason.setText(t['reason_text'])
         self.reason.setToolTip(f'내부 코드: {t["reason"]}')
         self.state_badge.setToolTip(f'내부 코드: {t["reason"]}')
+        self.countdown.setVisible(bool(sel))
         if sel:
             follow = (f' · 따라잡기 {sel["catchup_remaining_s"]:.0f}초' if sel['catchup_remaining_s'] > 0
                       else ' · 따라잡기 시간 초과')

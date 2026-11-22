@@ -157,23 +157,23 @@ class _Html(HTMLParser):
 
 
 class HtmlGuides(unittest.TestCase):
-    def check(self, name, header_id='guide-all'):
+    def check(self, name, header_id='guide-all', expanded=False):
         source = (ROOT / name).read_text(encoding='utf-8')
         body = re.sub(r'(?s)<script.*?</script>|<style.*?</style>', '', source)
         parser = _Html(); parser.feed(body)
         self.assertIn(header_id, parser.ids)
         self.assertGreaterEqual(len(parser.helps), 3)
         for button in parser.helps:
-            self.assertEqual(button.get('aria-expanded'), 'false')
+            self.assertEqual(button.get('aria-expanded'), str(expanded).lower())
             self.assertIn(button.get('aria-controls'), parser.boxes)
             self.assertTrue(button.get('aria-label', '').endswith('가이드'))
         for box in parser.boxes.values():
-            self.assertIn('hidden', box)
+            self.assertEqual('hidden' in box, not expanded)
         return '\n'.join(parser.outside)
 
     def test_tracking_dashboard(self):
         visible = self.check('tracking_dashboard.html')
-        for sentence in ('객체 확률이 아닙니다', '자동 재시도하지 않습니다', '고정된 프레임 위를 드래그', 'JPEG 스냅샷'):
+        for sentence in ('객체 확률이 아닙니다', '자동 재시도하지 않습니다'):
             self.assertNotIn(sentence, visible)
         self.assertIn('ARMED · 비행 중일 수 있습니다', visible)      # safety warning stays in the confirm panel
 

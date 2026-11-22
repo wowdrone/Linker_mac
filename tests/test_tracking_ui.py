@@ -110,6 +110,32 @@ class PanelBehaviour(unittest.TestCase):
         self.panel.shutdown()
         self.panel.close()
 
+    def test_three_resizable_panels_and_white_guides(self):
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QToolButton
+        p = self.panel
+        p.resize(1440, 900)
+        p.show(); self.app.processEvents()
+        self.assertEqual(p.main_splitter.orientation(), Qt.Horizontal)
+        self.assertEqual(p.right_splitter.orientation(), Qt.Vertical)
+        self.assertEqual(p.right_splitter.count(), 3)
+        widths = p.main_splitter.sizes()
+        self.assertLess(abs(widths[0] - widths[1]), 20)
+        heights = p.right_splitter.sizes()
+        self.assertLess(max(heights) - min(heights), 20)
+        p.main_splitter.setSizes([600, 800])
+        p.right_splitter.setSizes([320, 160, 160])
+        self.app.processEvents()
+        self.assertGreater(p.main_splitter.sizes()[1], p.main_splitter.sizes()[0])
+        self.assertGreater(p.right_splitter.sizes()[0], p.right_splitter.sizes()[1])
+        left = p.main_splitter.widget(0)
+        self.assertTrue(left.isAncestorOf(p.canvas))
+        self.assertFalse(left.isAncestorOf(p.source))
+        self.assertTrue(p.right_splitter.widget(0).isAncestorOf(p.buttons['ROI 선택']))
+        for button in p.findChildren(QToolButton):
+            if button.objectName() == 'guideButton':
+                self.assertIn('color:#ffffff', button.styleSheet())
+
     def test_transport_disabled_for_device_and_file(self):
         p = self.panel
         for text, enabled in (('rtsp://192.168.144.25:8554/main', True), ('0', False),
